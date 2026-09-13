@@ -3,6 +3,9 @@ import pandas as pd
 import datetime
 from streamlit_gsheets import GSheetsConnection
 
+# ------------------------------------------------------------------------------
+# 1. STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
+# ------------------------------------------------------------------------------
 st.set_page_config(page_title="🧪 MSPC 231 Interactive Quiz & Tracker", layout="wide")
 
 try:
@@ -130,6 +133,7 @@ st.sidebar.markdown(f"👤 **Student Logged In:**\n- **Name:** {student['name']}
 if st.sidebar.button("Log Out"):
     st.session_state.verified_user = None
     st.rerun()
+
 
 # ------------------------------------------------------------------------------
 # MSPC 231 QUESTION DATA
