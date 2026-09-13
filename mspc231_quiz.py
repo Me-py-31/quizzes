@@ -14,29 +14,83 @@ st.caption("Categorized by Case Scenarios, True/False, Exceptions & Direct MCQs 
 # Initialize Google Sheets connection
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-except Exception as e:
+except Exception:
     conn = None
-st.set_page_config(page_title="Medical Science Quiz", layout="wide")
 
-# Input name for each visitor
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
+# Initialize session state for user authentication
+if "verified_user" not in st.session_state:
+    st.session_state.verified_user = None  # Stores verified student dict: {"name": ..., "id": ...}
 
-if not st.session_state.user_name:
-    st.title("🎓 Medical Science Exam Quiz")
-    st.subheader("Welcome! Please enter your details to begin.")
-    
-    # Input field for Student Name / ID
-    input_name = st.text_input("Enter your Full Name or Student ID:", placeholder="e.g. John Doe / ST12345")
-    
-    if st.button("Start Quiz 🚀"):
-        if input_name.strip():
-            st.session_state.user_name = input_name.strip()
-            st.rerun()  # Refresh page to load quiz tabs
+
+# ------------------------------------------------------------------------------
+# 2. STUDENT ROSTER VERIFICATION FUNCTION
+# ------------------------------------------------------------------------------
+def verify_student(input_identifier):
+    """
+    Checks if the entered Name or ID exists in the 'Student_Roster' sheet tab.
+    Expected columns in roster sheet: 'Student_ID', 'Student_Name'
+    """
+    if conn is None:
+        st.error("Google Sheets connection not configured.")
+        return None
+
+    try:
+        # Read the Student_Roster tab (cached for 5 mins / 300s to keep it fast)
+        roster_df = conn.read(worksheet="Student_Roster", ttl=300)
+        
+        # Clean and standardize search query
+        search_query = str(input_identifier).strip().lower()
+        
+        # Clean roster columns for accurate matching
+        roster_df["Clean_ID"] = roster_df["Student_ID"].astype(str).str.strip().str.lower()
+        roster_df["Clean_Name"] = roster_df["Student_Name"].astype(str).str.strip().str.lower()
+
+        # Check for match in either Student_ID or Student_Name columns
+        match = roster_df[(roster_df["Clean_ID"] == search_query) | (roster_df["Clean_Name"] == search_query)]
+
+        if not match.empty:
+            matched_row = match.iloc
+            return {
+                "id": str(matched_row["Student_ID"]),
+                "name": str(matched_row["Student_Name"])
+            }
         else:
-            st.warning("⚠️ Please enter your name before proceeding.")
-            
-    # Stop execution here until name is provided
+            return None
+
+    except Exception as e:
+        st.error(f"Error accessing Student Roster sheet: {e}")
+        return None
+
+
+# ------------------------------------------------------------------------------
+# 3. VERIFICATION LOGIN GATE (LOCKS QUIZ UNTIL VERIFIED)
+# ------------------------------------------------------------------------------
+if not st.session_state.verified_user:
+    st.title("🎓 Medical Science Professional Exam Portal")
+    st.subheader("🔒 Student Identity Verification")
+    st.caption("Please enter your official Student ID or Full Name to access the quiz.")
+
+    with st.form("login_form"):
+        user_input = st.text_input(
+            "Student ID or Full Name:", 
+            placeholder="e.g. ST10293 or Jane Doe"
+        )
+        submit_button = st.form_submit_button("Verify & Start Quiz 🚀")
+
+    if submit_button:
+        if user_input.strip():
+            with st.spinner("Checking official student roster..."):
+                student_info = verify_student(user_input)
+                
+            if student_info:
+                st.session_state.verified_user = student_info
+                st.success(f"✅ Identity Verified! Welcome, **{student_info['name']}** ({student_info['id']}).")
+                st.rerun()  # Refresh page to load the quiz tabs
+            else:
+                st.error("❌ **Access Denied:** ID or Name not found in the official student roster. Please check for typos or contact your course administrator.")
+        else:
+            st.warning("⚠️ Please enter your Student ID or Name.")
+
     st.stop()
     
 # Helper function to log responses
