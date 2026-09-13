@@ -1650,35 +1650,28 @@ if "user_id" not in st.session_state:
 # 2. RESPONSE LOGGING FUNCTION
 # ------------------------------------------------------------------------------
 def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
-    """
-    Appends a new student response row directly to Google Sheets.
-    """
     try:
-        # Read current sheet data (ttl=0 bypasses cache to get fresh data)
-        existing_df = conn.read(ttl=0)
-    except Exception:
-        # Fallback empty DataFrame if sheet is currently empty
-        existing_df = pd.DataFrame(columns=[
-            "Timestamp", "User_ID", "Module", "Category", 
-            "Question", "Selected_Option", "Correct_Answer", "Is_Correct"
-        ])
+        # ttl=0 prevents caching issues
+        existing_df = conn.read(worksheet="Sheet1", ttl=0) 
+        
+        new_entry = pd.DataFrame([{
+            "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "User_ID": st.session_state.user_id,
+            "Module": module_name,
+            "Category": category,
+            "Question": question_text[:80],
+            "Selected_Option": selected_option,
+            "Correct_Answer": correct_answer,
+            "Is_Correct": "Correct" if is_correct else "Incorrect"
+        }])
 
-    # Create new record
-    new_entry = pd.DataFrame([{
-        "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "User_ID": st.session_state.user_id,
-        "Module": module_name,
-        "Category": category,
-        "Question": question_text[:80] + "...",  # Truncate long questions for clean rows
-        "Selected_Option": selected_option,
-        "Correct_Answer": correct_answer,
-        "Is_Correct": "Correct" if is_correct else "Incorrect"
-    }])
-
-    # Combine existing data with new entry and update Google Sheet
-    updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
-    conn.update(data=updated_df)
-
+        updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
+        conn.update(worksheet="Sheet1", data=updated_df)
+        st.toast("Response recorded to Google Sheets! ✅") # Visual confirmation
+        
+    except Exception as e:
+        # Display the hidden error directly on screen
+        st.error(f"Google Sheets Error: {e}")
 
 # ------------------------------------------------------------------------------
 # 3. EXAMPLE QUIZ QUESTION INTEGRATION
