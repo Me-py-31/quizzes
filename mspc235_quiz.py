@@ -13,15 +13,35 @@ st.title("💪🏼 MSPC 235: Musculoskeletal & Locomotor Systems Question Bank")
 st.caption("Categorized by Case Scenarios, True/False, Exceptions & Direct MCQs with Real-Time Response Logging")
 
 # Initialize Google Sheets connection
+# Initialize Google Sheets connection
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception as e:
     conn = None
+st.set_page_config(page_title="Medical Science Quiz", layout="wide")
 
-# Assign a unique session ID for each visitor
-if "user_id" not in st.session_state:
-    st.session_state.user_id = str(uuid.uuid4())[:8]
-
+# Input name for each visitor
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+except Exception:
+    conn = None
+if not st.session_state.user_name:
+    st.title("🎓 Medical Science Exam Quiz")
+    st.subheader("Welcome! Please enter your details to begin.")
+    
+    # Input field for Student Name / ID
+    input_name = st.text_input("Enter your Full Name or Student ID:", placeholder="e.g. John Doe / ST12345")
+    
+    if st.button("Start Quiz 🚀"):
+        if input_name.strip():
+            st.session_state.user_name = input_name.strip()
+            st.rerun()  # Refresh page to load quiz tabs
+        else:
+            st.warning("⚠️ Please enter your name before proceeding.")
+            
+    # Stop execution here until name is provided
+    st.stop()
+    
 # Helper function to log responses
 def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
     if conn is None:
@@ -36,7 +56,7 @@ def log_response(module_name, category, question_text, selected_option, correct_
 
     new_entry = pd.DataFrame([{
         "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "User_ID": st.session_state.user_id,
+        "User_ID": st.session_state.user_name,
         "Module": module_name,
         "Category": category,
         "Question": question_text[:80] + "...",
@@ -46,9 +66,15 @@ def log_response(module_name, category, question_text, selected_option, correct_
     }])
 
     updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
-    conn.update(worksheet="Sheet1", data=updated_df)
+    conn.update(worksheet=module_name, data=updated_df)
     st.toast("Response recorded to Google Sheets! ✅")
+    
+st.title("🎓 MSPC Interactive Exam Quiz")
+st.sidebar.markdown(f"👤 **Student Logged In:**\n`{st.session_state.user_name}`")
 
+if st.sidebar.button("Log Out / Change Name"):
+    st.session_state.user_name = ""
+    st.rerun()
 # ------------------------------------------------------------------------------
 # MSPC 235 QUESTION DATA
 # ------------------------------------------------------------------------------
