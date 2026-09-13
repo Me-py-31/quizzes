@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="MSPC231 Interactive Exam Quiz", layout="wide")
 
-st.title("🎓 MSPC 231: Cell Biology, Histology & Physiology (MSPC231)")
+st.title("💊 MSPC 231: Cell Biology, Histology & Physiology")
 st.markdown("### Interactive Comprehensive Question Bank (120 Questions)")
 st.caption("Grounded in Compiled Past Exam Questions and Assessment Trends.")
 
