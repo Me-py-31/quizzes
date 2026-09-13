@@ -27,7 +27,7 @@ def log_response(module_name, category, question_text, selected_option, correct_
     if conn is None:
         return
     try:
-        existing_df = conn.read(worksheet="Sheet1", ttl=0)
+        existing_df = conn.read(worksheet=module_name, ttl=0)
     except Exception:
         existing_df = pd.DataFrame(columns=[
             "Timestamp", "User_ID", "Module", "Category", 
@@ -46,7 +46,7 @@ def log_response(module_name, category, question_text, selected_option, correct_
     }])
 
     updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
-    conn.update(worksheet="Sheet1", data=updated_df)
+    conn.update(worksheet=module_name, data=updated_df)
     st.toast("Response recorded to Google Sheets! ✅")
 
 # ------------------------------------------------------------------------------
