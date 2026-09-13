@@ -1,1 +1,3 @@
-pip install st-gsheets-connection pandas
+streamlit
+st-gsheets-connection
+pandas
