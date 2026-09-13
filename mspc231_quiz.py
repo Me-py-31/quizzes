@@ -4,113 +4,95 @@ import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # ------------------------------------------------------------------------------
-# 1. INITIALIZATION & SESSION STATE
+# 1. STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="💊MSPC Interactive Exam Portal", layout="wide")
+st.set_page_config(page_title="🧪 MSPC 231 Interactive Quiz & Tracker", layout="wide")
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception:
     conn = None
 
-# Single session variable to hold verified student information
+# Initialize session state for user verification
 if "verified_user" not in st.session_state:
     st.session_state.verified_user = None  # Dict: {"id": ..., "name": ...}
 
 
 # ------------------------------------------------------------------------------
-# 2. SINGLE ROSTER VERIFICATION FUNCTION
+# 2. STUDENT ROSTER VERIFICATION FUNCTION
 # ------------------------------------------------------------------------------
 def verify_student(input_identifier):
-    # Standardize input query (strip spaces and convert to lowercase)
     search_query = str(input_identifier).strip().lower()
-    if search_query.endswith(".0"):
-        search_query = search_query[:-2]
-
     if not search_query or conn is None:
         return None
 
     try:
         # Read the Student_Roster tab from Google Sheets
         roster_df = conn.read(worksheet="Student_Roster", ttl=60)
+        
+        # Clean column names
         roster_df.columns = roster_df.columns.str.strip().str.lower()
         
-        # Locate ID and Name columns dynamically
+        # Identify ID and Name column names
         id_cols = [c for c in roster_df.columns if "id" in c]
         name_cols = [c for c in roster_df.columns if "name" in c]
 
         if id_cols and name_cols:
-            id_col = id_cols
-            name_col = name_cols
+            id_name = id_cols      # Extract string header
+            name_name = name_cols  # Extract string header
             
-            # Clean ID series: convert floats (e.g., 203001.0 -> 203001) and trim strings
-            id_series = (
-                roster_df[id_col]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-                .str.replace(r"\.0$", "", regex=True)
-            )
-            
-            # Clean Name series
-            name_series = (
-                roster_df[name_col]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-            )
-            
-            # Check for match in either ID or Name
-            match = roster_df[(id_series == search_query) | (name_series == search_query)]
+            # Match query against ID or Name
+            match = roster_df[
+                (roster_df[id_name].astype(str).str.strip().str.lower() == search_query) |
+                (roster_df[name_name].astype(str).str.strip().str.lower() == search_query)
+            ]
             
             if not match.empty:
-                row = match.iloc
-                clean_id = str(row[id_col]).strip()
-                if clean_id.endswith(".0"):
-                    clean_id = clean_id[:-2]
-                    
+                row = match.iloc  # Extract first matching row
                 return {
-                    "id": clean_id,
-                    "name": str(row[name_col]).strip()
+                    "id": str(row[id_name]),
+                    "name": str(row[name_name])
                 }
     except Exception as e:
-        st.error(f"Roster check error: {e}")
+        st.error(f"Roster Verification Error: {e}")
         
     return None
 
-# ------------------------------------------------------------------------------
-# 3. SINGLE INPUT LOGIN GATE (APPEARS ONLY ONCE)
-# ------------------------------------------------------------------------------
-if st.session_state.verified_user is None:
-    st.title("🎓 Medical Science Exam Portal")
-    st.subheader("🔒 Student Verification")
-    st.caption("Enter your Student ID or Full Name once to unlock your exam bank.")
 
-    # SINGLE INPUT FIELD
-    user_input = st.text_input("Student ID or Full Name:", key="login_input")
-    
-    if st.button("Verify & Enter Quiz 🚀"):
+# ------------------------------------------------------------------------------
+# 3. VERIFICATION LOGIN GATE
+# ------------------------------------------------------------------------------
+if not st.session_state.verified_user:
+    st.title("🎓 Medical Science Professional Exam Portal")
+    st.subheader("🔒 Student Identity Verification")
+    st.caption("Please enter your official Student ID or Full Name to access the quiz.")
+
+    with st.form("login_form"):
+        user_input = st.text_input("Student ID or Full Name:", placeholder="e.g. ST10293 or Jane Doe")
+        submit_button = st.form_submit_button("Verify & Start Quiz 🚀")
+
+    if submit_button:
         if user_input.strip():
-            with st.spinner("Checking roster..."):
+            with st.spinner("Checking official student roster..."):
                 student_info = verify_student(user_input)
                 
             if student_info:
                 st.session_state.verified_user = student_info
-                st.rerun()  # Reloads app directly into the quiz
+                st.success(f"✅ Identity Verified! Welcome, **{student_info['name']}** ({student_info['id']}).")
+                st.rerun()
             else:
                 st.error("❌ **Access Denied:** ID or Name not found in the official student roster.")
         else:
             st.warning("⚠️ Please enter your Student ID or Name.")
 
-    # Stop execution here so unverified users cannot see questions below
     st.stop()
 
 
 # ------------------------------------------------------------------------------
-# 4. RESPONSE LOGGING FUNCTION (USES SAVED VERIFIED USER)
+# 4. RESPONSE LOGGING FUNCTION
 # ------------------------------------------------------------------------------
 def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
-    if conn is None or st.session_state.verified_user is None:
+    if conn is None or not st.session_state.verified_user:
         return
         
     student = st.session_state.verified_user
@@ -137,22 +119,20 @@ def log_response(module_name, category, question_text, selected_option, correct_
 
     updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
     conn.update(worksheet=module_name, data=updated_df)
-    st.toast("Response recorded! ✅")
+    st.toast("Response recorded to Google Sheets! ✅")
 
 
 # ------------------------------------------------------------------------------
-# 5. QUIZ INTERFACE (LOGGED-IN STATE)
+# 5. MAIN QUIZ INTERFACE & SIDEBAR
 # ------------------------------------------------------------------------------
 student = st.session_state.verified_user
 
-# Display logged-in identity in the sidebar
-st.sidebar.markdown(f"👤 **Logged in as:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
+st.title("💊 MSPC 231: Cell Biology, Histology & Physiology Question Bank")
+st.sidebar.markdown(f"👤 **Student Logged In:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
 
 if st.sidebar.button("Log Out"):
     st.session_state.verified_user = None
     st.rerun()
-
-st.title("💊 MSPC Interactive Exam Bank")
 # ------------------------------------------------------------------------------
 # MSPC 231 QUESTION DATA
 # ------------------------------------------------------------------------------
