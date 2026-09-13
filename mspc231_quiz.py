@@ -4,63 +4,61 @@ import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # ------------------------------------------------------------------------------
-# 1. STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
+# 1. INITIALIZE CONNECTIONS
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="🧪 MSPC 231 Interactive Quiz & Tracker", layout="wide")
-
+# Primary Connection (Roster & Response Sheets)
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception:
     conn = None
 
-# Initialize session state for user verification
+# Initialize session state for user authentication
 if "verified_user" not in st.session_state:
-    st.session_state.verified_user = None  # Dict: {"id": ..., "name": ...}
+    st.session_state.verified_user = None  # Stores verified student dict: {"name": ..., "id": ...}
 
 
 # ------------------------------------------------------------------------------
 # 2. STUDENT ROSTER VERIFICATION FUNCTION
 # ------------------------------------------------------------------------------
 def verify_student(input_identifier):
-    search_query = str(input_identifier).strip().lower()
-    if not search_query or conn is None:
+    """
+    Checks if the entered Name or ID exists in the 'Student_Roster' sheet tab.
+    Expected columns in roster sheet: 'Student_ID', 'Student_Name'
+    """
+    if conn is None:
+        st.error("Google Sheets connection not configured.")
         return None
 
     try:
-        # Read the Student_Roster tab from Google Sheets
-        roster_df = conn.read(worksheet="Student_Roster", ttl=60)
+        # Read the Student_Roster tab (cached for 5 mins / 300s to keep it fast)
+        roster_df = conn.read(worksheet="Student_Roster", ttl=300)
         
-        # Clean column names
-        roster_df.columns = roster_df.columns.str.strip().str.lower()
+        # Clean and standardize search query
+        search_query = str(input_identifier).strip().lower()
         
-        # Identify ID and Name column names
-        id_cols = [c for c in roster_df.columns if "id" in c]
-        name_cols = [c for c in roster_df.columns if "name" in c]
+        # Clean roster columns for accurate matching
+        roster_df["Clean_ID"] = roster_df["Student_ID"].astype(str).str.strip().str.lower()
+        roster_df["Clean_Name"] = roster_df["Student_Name"].astype(str).str.strip().str.lower()
 
-        if id_cols and name_cols:
-            id_name = id_cols      # Extract string header
-            name_name = name_cols  # Extract string header
-            
-            # Match query against ID or Name
-            match = roster_df[
-                (roster_df[id_name].astype(str).str.strip().str.lower() == search_query) |
-                (roster_df[name_name].astype(str).str.strip().str.lower() == search_query)
-            ]
-            
-            if not match.empty:
-                row = match.iloc  # Extract first matching row
-                return {
-                    "id": str(row[id_name]),
-                    "name": str(row[name_name])
-                }
+        # Check for match in either Student_ID or Student_Name columns
+        match = roster_df[(roster_df["Clean_ID"] == search_query) | (roster_df["Clean_Name"] == search_query)]
+
+        if not match.empty:
+            matched_row = match.iloc
+            return {
+                "id": str(matched_row["Student_ID"]),
+                "name": str(matched_row["Student_Name"])
+            }
+        else:
+            return None
+
     except Exception as e:
-        st.error(f"Roster Verification Error: {e}")
-        
-    return None
+        st.error(f"Error accessing Student Roster sheet: {e}")
+        return None
 
 
 # ------------------------------------------------------------------------------
-# 3. VERIFICATION LOGIN GATE
+# 3. VERIFICATION LOGIN GATE (LOCKS QUIZ UNTIL VERIFIED)
 # ------------------------------------------------------------------------------
 if not st.session_state.verified_user:
     st.title("🎓 Medical Science Professional Exam Portal")
@@ -68,7 +66,10 @@ if not st.session_state.verified_user:
     st.caption("Please enter your official Student ID or Full Name to access the quiz.")
 
     with st.form("login_form"):
-        user_input = st.text_input("Student ID or Full Name:", placeholder="e.g. ST10293 or Jane Doe")
+        user_input = st.text_input(
+            "Student ID or Full Name:", 
+            placeholder="e.g. ST10293 or Jane Doe"
+        )
         submit_button = st.form_submit_button("Verify & Start Quiz 🚀")
 
     if submit_button:
@@ -79,24 +80,22 @@ if not st.session_state.verified_user:
             if student_info:
                 st.session_state.verified_user = student_info
                 st.success(f"✅ Identity Verified! Welcome, **{student_info['name']}** ({student_info['id']}).")
-                st.rerun()
+                st.rerun()  # Refresh page to load the quiz tabs
             else:
-                st.error("❌ **Access Denied:** ID or Name not found in the official student roster.")
+                st.error("❌ **Access Denied:** ID or Name not found in the official student roster. Please check for typos or contact your course administrator.")
         else:
             st.warning("⚠️ Please enter your Student ID or Name.")
 
-    st.stop()
+    st.stop()  # Halts execution here so unverified users cannot view the questions below
 
 
 # ------------------------------------------------------------------------------
-# 4. RESPONSE LOGGING FUNCTION
+# 4. RESPONSE LOGGING FUNCTION (USES VERIFIED STUDENT ID & NAME)
 # ------------------------------------------------------------------------------
 def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
-    if conn is None or not st.session_state.verified_user:
+    if conn is None:
         return
         
-    student = st.session_state.verified_user
-    
     try:
         existing_df = conn.read(worksheet=module_name, ttl=0)
     except Exception:
@@ -104,6 +103,8 @@ def log_response(module_name, category, question_text, selected_option, correct_
             "Timestamp", "Student_ID", "Student_Name", "Module", 
             "Category", "Question", "Selected_Option", "Correct_Answer", "Is_Correct"
         ])
+
+    student = st.session_state.verified_user
 
     new_entry = pd.DataFrame([{
         "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -119,16 +120,15 @@ def log_response(module_name, category, question_text, selected_option, correct_
 
     updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
     conn.update(worksheet=module_name, data=updated_df)
-    st.toast("Response recorded to Google Sheets! ✅")
+    st.toast("Response recorded! ✅")
 
 
 # ------------------------------------------------------------------------------
-# 5. MAIN QUIZ INTERFACE & SIDEBAR
+# 5. QUIZ INTERFACE (ACCESSIBLE ONLY TO VERIFIED STUDENTS)
 # ------------------------------------------------------------------------------
 student = st.session_state.verified_user
 
-st.title("💊 MSPC 231: Cell Biology, Histology & Physiology Question Bank")
-st.sidebar.markdown(f"👤 **Student Logged In:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
+st.sidebar.markdown(f"👤 **Logged-in Student:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
 
 if st.sidebar.button("Log Out"):
     st.session_state.verified_user = None
