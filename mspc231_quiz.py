@@ -39,10 +39,12 @@ def verify_student(input_identifier):
         roster_df = conn.read(worksheet="Student_Roster", ttl=300)
         
         # Clean and standardize search query
+        roster_df["Clean_ID"] = roster_df["Student_ID"].astype(str).str.strip().str.lower()
+        roster_df["Clean_Name"] = roster_df["Student_Name"].astype(str).str.strip().str.lower()
         search_query = str(input_identifier).strip().lower()
 
         # Check for match in either Student_ID or Student_Name columns
-        match = roster_df[(roster_df["Student_ID"] == search_query) | (roster_df["Student_Name"] == search_query)]
+        match = roster_df[(roster_df["Clean_ID"] == search_query) | (roster_df["Clean_Name"] == search_query)]
 
         if not match.empty:
             matched_row = match.iloc
