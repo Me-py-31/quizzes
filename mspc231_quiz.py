@@ -1,4 +1,8 @@
 import streamlit as st
+import pandas as pd
+import datetime
+import uuid
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="MSPC231 Interactive Exam Quiz", layout="wide")
 
@@ -1631,3 +1635,85 @@ with tab2:
 
 with tab3:
     render_quiz_section(BIOCHEM_QS, "biochem")
+
+# ------------------------------------------------------------------------------
+# 1. INITIALIZE GOOGLE SHEETS CONNECTION
+# ------------------------------------------------------------------------------
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+# Assign a unique session ID for each visitor
+if "user_id" not in st.session_state:
+    st.session_state.user_id = str(uuid.uuid4())[:8]  # Short 8-character ID
+
+
+# ------------------------------------------------------------------------------
+# 2. RESPONSE LOGGING FUNCTION
+# ------------------------------------------------------------------------------
+def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
+    """
+    Appends a new student response row directly to Google Sheets.
+    """
+    try:
+        # Read current sheet data (ttl=0 bypasses cache to get fresh data)
+        existing_df = conn.read(ttl=0)
+    except Exception:
+        # Fallback empty DataFrame if sheet is currently empty
+        existing_df = pd.DataFrame(columns=[
+            "Timestamp", "User_ID", "Module", "Category", 
+            "Question", "Selected_Option", "Correct_Answer", "Is_Correct"
+        ])
+
+    # Create new record
+    new_entry = pd.DataFrame([{
+        "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "User_ID": st.session_state.user_id,
+        "Module": module_name,
+        "Category": category,
+        "Question": question_text[:80] + "...",  # Truncate long questions for clean rows
+        "Selected_Option": selected_option,
+        "Correct_Answer": correct_answer,
+        "Is_Correct": "Correct" if is_correct else "Incorrect"
+    }])
+
+    # Combine existing data with new entry and update Google Sheet
+    updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
+    conn.update(data=updated_df)
+
+
+# ------------------------------------------------------------------------------
+# 3. EXAMPLE QUIZ QUESTION INTEGRATION
+# ------------------------------------------------------------------------------
+def render_question(q_id, module_name, category, question_dict):
+    st.subheader(question_dict["question"])
+    
+    # Unique key for Streamlit state
+    radio_key = f"{module_name}_{q_id}"
+    
+    user_choice = st.radio(
+        "Select your answer:", 
+        question_dict["options"], 
+        key=radio_key, 
+        index=None
+    )
+    
+    if user_choice is not None:
+        selected_letter = user_choice.split(".").strip()
+        is_correct = (selected_letter == question_dict["answer"])
+        
+        # Display Result UI
+        if is_correct:
+            st.success(f"Correct! 🎉\n\n**Explanation:** {question_dict['explanation']}")
+        else:
+            st.error(f"Incorrect. Correct Answer: **{question_dict['answer']}**\n\n**Explanation:** {question_dict['explanation']}")
+            
+        # Log response to Google Sheets (triggers only once per radio button selection)
+        if f"logged_{radio_key}" not in st.session_state:
+            log_response(
+                module_name=module_name,
+                category=category,
+                question_text=question_dict["question"],
+                selected_option=selected_letter,
+                correct_answer=question_dict["answer"],
+                is_correct=is_correct
+            )
+            st.session_state[f"logged_{radio_key}"] = True
