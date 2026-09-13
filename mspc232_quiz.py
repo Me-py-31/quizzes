@@ -1,564 +1,736 @@
 import streamlit as st
+import pandas as pd
+import datetime
+from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="MSPC232 Comprehensive Quiz (72 MCQs)", layout="wide", page_icon="🧪")
+# ------------------------------------------------------------------------------
+# 1. STREAMLIT CONFIG & GOOGLE SHEETS INITIALIZATION
+# ------------------------------------------------------------------------------
+st.set_page_config(page_title="MSPC232 Interactive Quiz & Tracker", layout="wide")
 
-st.title("🧪 MSPC232: Medical Biochemistry & Metabolism Interactive Quiz")
-st.caption("Compiled from Exam 2030, IA 2030, and Past Exam Documents • Includes Case Scenarios, Direct MCQs, True/False & Exceptions")
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception:
+    conn = None
 
-if 'answers' not in st.session_state:
-    st.session_state.answers = {}
+# Initialize session state for user verification
+if "verified_user" not in st.session_state:
+    st.session_state.verified_user = None  # Dict: {"id": ..., "name": ...}
 
-tabs = st.tabs(["🧪 Biochemistry & Enzymology (30 Qs)", "⚡ Physiology & Clinical Bioenergetics (22 Qs)", "🫀 Anatomy & Nutrition (20 Qs)"])
 
-# QUESTION BANK: BIOCHEMISTRY (30 Questions)
-q_biochem = [
-    {
-        "id": "b1", "type": "Direct MCQs",
-        "q": "What is the direction of phosphoryl group transfer in metabolism?",
-        "options": ["A. ATP -> high-energy phosphate -> low-energy phosphate", "B. Low-energy phosphate -> high-energy phosphate -> ATP", "C. High-energy phosphate compounds -> ATP -> low-energy phosphate compounds", "D. ATP -> low-energy phosphate -> high-energy phosphate"],
-        "answer": "C. High-energy phosphate compounds -> ATP -> low-energy phosphate compounds",
-        "exp": "Phosphoryl groups flow from high-energy donors (e.g., PEP, 1,3-BPG) to ATP, which then donates phosphate to low-energy acceptors (e.g., glucose, glycerol)."
-    },
-    {
-        "id": "b2", "type": "Case Scenarios",
-        "q": "A research scientist adds avidin (a egg-white biotin-binding protein) to a hepatocyte culture. Which metabolic pathway conversion will be directly blocked?",
-        "options": ["A. Glucose to pyruvate", "B. Pyruvate to glucose", "C. Oxaloacetate to glucose", "D. Glucose to ribose-5-phosphate"],
-        "answer": "B. Pyruvate to glucose",
-        "exp": "Pyruvate carboxylase requires biotin to convert pyruvate to oxaloacetate in gluconeogenesis. Avidin inhibits biotin, halting gluconeogenesis from pyruvate."
-    },
-    {
-        "id": "b3", "type": "Exceptions",
-        "q": "An infant presents with lethargy, vomiting, diarrhea, and failure to thrive after milk feeding, and is diagnosed with galactosemia. Which of the following enzymes is NOT typically compromised in galactosemia?",
-        "options": ["A. Galactokinase", "B. Galactose-1-phosphate uridyl transferase (GALT)", "C. UDP-galactose 4-epimerase", "D. Phosphoglucomutase"],
-        "answer": "D. Phosphoglucomutase",
-        "exp": "Galactosemia results from deficiencies in Galactokinase, GALT, or Epimerase. Phosphoglucomutase converts G1P to G6P in glycogen pathways."
-    },
-    {
-        "id": "b4", "type": "Direct MCQs",
-        "q": "Why is olive oil liquid at room temperature while butter is solid?",
-        "options": ["A. Olive oil contains predominantly cis-unsaturated fatty acids", "B. Olive oil contains trans-unsaturated fatty acids", "C. Olive oil contains saturated long-chain fatty acids", "D. Butter lacks saturated fatty acids"],
-        "answer": "A. Olive oil contains predominantly cis-unsaturated fatty acids",
-        "exp": "Cis double bonds introduce kinks in acyl chains, preventing tight intermolecular packing and lowering melting point."
-    },
-    {
-        "id": "b5", "type": "Direct MCQs",
-        "q": "Excessive ingestion of ethanol inhibits gluconeogenesis primarily through which mechanism?",
-        "options": ["A. Increased NAD+/NADH ratio", "B. Decreased NAD+/NADH ratio (elevated NADH/NAD+)", "C. Direct allosteric inhibition of fructose-1,6-bisphosphatase", "D. Depletion of acetyl-CoA"],
-        "answer": "B. Decreased NAD+/NADH ratio (elevated NADH/NAD+)",
-        "exp": "Ethanol oxidation by alcohol dehydrogenase generates abundant cytosolic NADH, consuming pyruvate and oxaloacetate and causing hypoglycemia."
-    },
-    {
-        "id": "b6", "type": "Direct MCQs",
-        "q": "Which pair of amino acids contain hydroxyl groups capable of forming O-glycosidic linkages in glycoproteins?",
-        "options": ["A. Glutamine and Asparagine", "B. Serine and Threonine", "C. Lysine and Arginine", "D. Aspartate and Glutamate"],
-        "answer": "B. Serine and Threonine",
-        "exp": "Serine and threonine possess side-chain hydroxyl (-OH) groups that undergo O-linked glycosylation."
-    },
-    {
-        "id": "b7", "type": "Direct MCQs",
-        "q": "Erythrulose is classified biochemically as a:",
-        "options": ["A. Aldotetrose", "B. Tetraketose", "C. Aldopentose", "D. Ketohexose"],
-        "answer": "B. Tetraketose",
-        "exp": "Erythrulose is a four-carbon ketose sugar (tetraketose)."
-    },
-    {
-        "id": "b8", "type": "Exceptions",
-        "q": "Which of the following carbohydrates is NOT a substrate for aldose reductase in the polyol pathway?",
-        "options": ["A. Glucose", "B. Galactose", "C. Sucrose", "D. Sorbitol precursor aldoses"],
-        "answer": "C. Sucrose",
-        "exp": "Aldose reductase acts on aldose monosaccharides (glucose, galactose). Disaccharides like sucrose do not fit the active site."
-    },
-    {
-        "id": "b9", "type": "True or False",
-        "q": "Select the TRUE statement regarding inorganic pyrophosphate (PPi) hydrolysis during amino acid activation:",
-        "options": ["A. PPi hydrolysis absorbs heat and inhibits synthetic reactions", "B. Hydrolysis of PPi by pyrophosphatase yields a large negative Delta G, driving endergonic synthesis to completion", "C. PPi is directly recycled into ADP without loss of energy", "D. PPi hydrolysis reduces the yield of cellular ATP"],
-        "answer": "B. Hydrolysis of PPi by pyrophosphatase yields a large negative Delta G, driving endergonic synthesis to completion",
-        "exp": "Pyrophosphatase hydrolyzes PPi to 2 Pi (Delta G = -19 kJ/mol), making synthetic activation steps irreversible."
-    },
-    {
-        "id": "b10", "type": "Exceptions",
-        "q": "Which of the following lipid classes does NOT contain a fatty acid component?",
-        "options": ["A. Cholesteryl esters", "B. Plasmalogens", "C. Free Cholesterol", "D. Sphingomyelin"],
-        "answer": "C. Free Cholesterol",
-        "exp": "Free cholesterol is a sterol lacking fatty acyl chains until esterified by ACAT/LCAT into cholesteryl esters."
-    },
-    {
-        "id": "b11", "type": "Direct MCQs",
-        "q": "To ensure maximum enzymatic activity of the Pyruvate Dehydrogenase (PDH) complex, which intramitochondrial metabolite level should be kept VERY LOW?",
-        "options": ["A. NAD+", "B. Coenzyme A", "C. NADH", "D. Pyruvate"],
-        "answer": "C. NADH",
-        "exp": "NADH and Acetyl-CoA directly inhibit PDH and activate PDH kinase, inactivating the complex."
-    },
-    {
-        "id": "b12", "type": "Case Scenarios",
-        "q": "A 56-year-old man undergoing surgery is found to have dark brown cartilage in his hip joint (ochronosis). His urine turns dark black upon standing. Which enzyme is deficient?",
-        "options": ["A. Tyrosinase", "B. Homogentisate oxidase", "C. Phenylalanine hydroxylase", "D. Fumarylacetoacetate hydrolase"],
-        "answer": "B. Homogentisate oxidase",
-        "exp": "Alkaptonuria is caused by homogentisate oxidase deficiency, leading to homogentisic acid accumulation, dark urine, and tissue ochronosis."
-    },
-    {
-        "id": "b13", "type": "Exceptions",
-        "q": "All of the following dietary/therapeutic interventions help ameliorate hyperammonemia EXCEPT:",
-        "options": ["A. Citrulline", "B. Arginine", "C. Sodium benzoate", "D. High protein intake"],
-        "answer": "D. High protein intake",
-        "exp": "High dietary protein increases nitrogen load, worsening hyperammonemia."
-    },
-    {
-        "id": "b14", "type": "Direct MCQs",
-        "q": "Which combination of enzymes provides the primary pathway for converting amino acid nitrogen into free ammonia in humans?",
-        "options": ["A. Aminotransferases and Glutamate Dehydrogenase", "B. Glutaminase and Arginase", "C. Alanine aminotransferase and Glutamine Synthetase", "D. Amino acid oxidase and Uricase"],
-        "answer": "A. Aminotransferases and Glutamate Dehydrogenase",
-        "exp": "Transdeamination pairs cytosolic aminotransferases with mitochondrial glutamate dehydrogenase to funnel nitrogen into free NH4+."
-    },
-    {
-        "id": "b15", "type": "Exceptions",
-        "q": "Inborn errors of branched-chain amino acid metabolism include all of the following EXCEPT:",
-        "options": ["A. Maple Syrup Urine Disease (MSUD)", "B. Isovaleric acidemia", "C. Methylmalonic acidemia", "D. Alkaptonuria"],
-        "answer": "D. Alkaptonuria",
-        "exp": "Alkaptonuria affects tyrosine/phenylalanine degradation, not branched-chain amino acids."
-    },
-    {
-        "id": "b16", "type": "Case Scenarios",
-        "q": "A 66-year-old malnourished man presents with macrocytic anemia. Laboratory analysis reveals elevated blood levels of BOTH homocysteine and methylmalonic acid (MMA). What is the specific deficiency?",
-        "options": ["A. Folate (Vitamin B9)", "B. Vitamin B12 (Cobalamin)", "C. Vitamin B6 (Pyridoxine)", "D. Iron"],
-        "answer": "B. Vitamin B12 (Cobalamin)",
-        "exp": "Vitamin B12 is required for methylmalonyl-CoA mutase and methionine synthase. Folate deficiency elevates homocysteine alone."
-    },
-    {
-        "id": "b17", "type": "Direct MCQs",
-        "q": "Propionyl-CoA carboxylase requires which essential cofactor, deficiency of which leads to propionic acidemia?",
-        "options": ["A. Thiamine (B1)", "B. Biotin (B7)", "C. Niacin (B3)", "D. Pyridoxine (B6)"],
-        "answer": "B. Biotin (B7)",
-        "exp": "Propionyl-CoA carboxylase is a biotin-dependent enzyme."
-    },
-    {
-        "id": "b18", "type": "Exceptions",
-        "q": "Which of the following is NOT a feature of the Ubiquitin-Proteasome system of proteolysis?",
-        "options": ["A. Requires ATP hydrolysis", "B. Targets proteins tagged with polyubiquitin chains", "C. Operates inside acidic lysosomal compartments", "D. Uses isopeptide bonds between ubiquitin and lysine residues"],
-        "answer": "C. Operates inside acidic lysosomal compartments",
-        "exp": "Ubiquitin-proteasome degradation occurs in the neutral cytosol and nucleus, not in acidic lysosomes."
-    },
-    {
-        "id": "b19", "type": "Case Scenarios",
-        "q": "A 2-year-old child presents with severe abdominal pain, dark urine containing uroporphyrin, and extreme skin photosensitivity. Diagnosis reveals Congenital Erythropoietic Porphyria (CEP). Which enzyme is deficient?",
-        "options": ["A. ALA dehydratase", "B. Uroporphyrinogen III synthase (cosynthase)", "C. Ferrochelatase", "D. PBG deaminase"],
-        "answer": "B. Uroporphyrinogen III synthase (cosynthase)",
-        "exp": "CEP (Gunther disease) results from uroporphyrinogen III synthase deficiency, causing accumulation of photosensitizing type I porphyrins."
-    },
-    {
-        "id": "b20", "type": "Case Scenarios",
-        "q": "A 25-year-old patient presents with recurrent acute abdominal pain and confusion without skin photosensitivity. Urine assay shows elevated porphobilinogen (PBG). What is the diagnosis?",
-        "options": ["A. Porphyria Cutanea Tarda", "B. Acute Intermittent Porphyria (AIP)", "C. Congenital Erythropoietic Porphyria", "D. Erythropoietic Protoporphyria"],
-        "answer": "B. Acute Intermittent Porphyria (AIP)",
-        "exp": "AIP is caused by PBG deaminase deficiency, presenting with neurovisceral symptoms without photosensitivity."
-    },
-    {
-        "id": "b21", "type": "True or False",
-        "q": "Select the TRUE statement regarding lead poisoning and heme biosynthesis:",
-        "options": ["A. Lead specifically activates ALA synthase", "B. Lead inhibits ALA dehydratase and Ferrochelatase", "C. Lead enhances iron incorporation into protoporphyrin IX", "D. Lead causes uroporphyrin decarboxylase hyperfunction"],
-        "answer": "B. Lead inhibits ALA dehydratase and Ferrochelatase",
-        "exp": "Lead inactivates zinc-dependent ALA dehydratase and ferrochelatase, causing microcytic anemia and elevated zinc protoporphyrin."
-    },
-    {
-        "id": "b22", "type": "Case Scenarios",
-        "q": "A patient with gallstone obstruction of the common bile duct presents with yellow sclera and pale, clay-colored stools. The pale stool is due to the absence of:",
-        "options": ["A. Biliverdin", "B. Stercobilin", "C. Conjugated bilirubin in urine", "D. Urobilinogen in bile"],
-        "answer": "B. Stercobilin",
-        "exp": "Stercobilin provides stool its brown color. Biliary obstruction prevents bilirubin from entering the intestine to form stercobilin."
-    },
-    {
-        "id": "b23", "type": "Direct MCQs",
-        "q": "What is the primary mechanism by which 2,4-dinitrophenol (DNP) uncouples oxidative phosphorylation?",
-        "options": ["A. Directly inhibits ATP synthase F1 subunit", "B. Dissipates the inner mitochondrial proton gradient as heat", "C. Blocks electron transport at Complex III", "D. Inhibits the adenine nucleotide translocase"],
-        "answer": "B. Dissipates the inner mitochondrial proton gradient as heat",
-        "exp": "DNP transports protons across the inner mitochondrial membrane into the matrix, bypassing ATP synthase and dissipating energy as heat."
-    },
-    {
-        "id": "b24", "type": "Direct MCQs",
-        "q": "Which apolipoprotein is essential for the hepatic assembly and secretion of Very Low-Density Lipoproteins (VLDL)?",
-        "options": ["A. ApoB-48", "B. ApoB-100", "C. ApoA-1", "D. ApoE"],
-        "answer": "B. ApoB-100",
-        "exp": "ApoB-100 is synthesized in hepatocytes for VLDL/LDL assembly; ApoB-48 is made in enterocytes for chylomicrons."
-    },
-    {
-        "id": "b25", "type": "Case Scenarios",
-        "q": "A 15-year-old girl with primary amenorrhea and clitoromegaly is diagnosed with Congenital Adrenal Hyperplasia (CAH). Which enzyme deficiency is most common?",
-        "options": ["A. 17-alpha-hydroxylase", "B. 21-alpha-hydroxylase", "C. 11-beta-hydroxylase", "D. 3-beta-hydroxysteroid dehydrogenase"],
-        "answer": "B. 21-alpha-hydroxylase",
-        "exp": "21-hydroxylase deficiency impairs cortisol/aldosterone synthesis, shifting steroid precursors into adrenal androgens."
-    },
-    {
-        "id": "b26", "type": "Direct MCQs",
-        "q": "Acetyl-CoA produced in mitochondria exits into the cytosol for fatty acid synthesis in the form of:",
-        "options": ["A. Pyruvate", "B. Citrate", "C. Oxaloacetate", "D. Malate"],
-        "answer": "B. Citrate",
-        "exp": "Citrate carries acetyl units across the inner mitochondrial membrane to the cytosol, where ATP citrate lyase cleaves it back into acetyl-CoA and OAA."
-    },
-    {
-        "id": "b27", "type": "Case Scenarios",
-        "q": "A patient taking NSAIDs develops gastric mucosal erosions due to inhibition of cyclooxygenase, decreasing synthesis of protective:",
-        "options": ["A. Leukotrienes B4", "B. Prostaglandins E2 and I2", "C. Thromboxane A2", "D. Histamine"],
-        "answer": "B. Prostaglandins E2 and I2",
-        "exp": "PGE2 and PGI2 maintain gastric mucosal mucus, bicarbonate secretion, and blood flow."
-    },
-    {
-        "id": "b28", "type": "Case Scenarios",
-        "q": "An asthmatic patient takes aspirin for a headache and experiences acute bronchospasm. This occurs due to increased synthesis of:",
-        "options": ["A. Thromboxanes", "B. Cysteinyl leukotrienes (LTC4, LTD4, LTE4)", "C. Prostacyclin", "D. Nitric oxide"],
-        "answer": "B. Cysteinyl leukotrienes (LTC4, LTD4, LTE4)",
-        "exp": "COX-1 inhibition shunts unesterified arachidonic acid into the 5-lipoxygenase pathway, generating bronchoconstrictor leukotrienes."
-    },
-    {
-        "id": "b29", "type": "Case Scenarios",
-        "q": "A 4-month-old infant presents with fasting hypoglycemia, hypoketosis, and dicarboxylic aciduria following a viral illness. What is the defect?",
-        "options": ["A. G6PD deficiency", "B. Medium-Chain Acyl-CoA Dehydrogenase (MCAD) deficiency", "C. CPT-I deficiency", "D. Pyruvate kinase deficiency"],
-        "answer": "B. Medium-Chain Acyl-CoA Dehydrogenase (MCAD) deficiency",
-        "exp": "MCAD deficiency impairs medium-chain fatty acid beta-oxidation during fasting, leading to hypoketotic hypoglycemia."
-    },
-    {
-        "id": "b30", "type": "Direct MCQs",
-        "q": "Which intermediate is common to the synthesis of BOTH triacylglycerols and glycerophospholipids?",
-        "options": ["A. CDP-choline", "B. Phosphatidic acid", "C. Diacylglycerol kinase", "D. Mevalonate"],
-        "answer": "B. Phosphatidic acid",
-        "exp": "Phosphatidic acid is the central branch-point intermediate for both TAG and phospholipid biosynthesis."
-    }
-]
+# ------------------------------------------------------------------------------
+# 2. ROSTER VERIFICATION FUNCTION (HANDLES NUMBERS & LETTERS)
+# ------------------------------------------------------------------------------
+def verify_student(input_identifier):
+    search_query = str(input_identifier).strip().lower()
+    if search_query.endswith(".0"):
+        search_query = search_query[:-2]
 
-# QUESTION BANK: PHYSIOLOGY (22 Questions)
-q_physio = [
-    {
-        "id": "p1", "type": "Direct MCQs",
-        "q": "During high-intensity anaerobic exercise, why is pyruvate reduced to lactate by Lactate Dehydrogenase?",
-        "options": ["A. To lower cytosolic pH", "B. To regenerate NAD+ required for continued glycolysis", "C. To prevent ATP accumulation", "D. To stimulate glycogen phosphorylase"],
-        "answer": "B. To regenerate NAD+ required for continued glycolysis",
-        "exp": "Anaerobic LDH activity oxidizes NADH to NAD+, allowing GAPDH to sustain glycolytic ATP synthesis."
-    },
-    {
-        "id": "p2", "type": "Case Scenarios",
-        "q": "A male patient treated with primaquine for malaria develops sudden fatigue, dark urine, and jaundice. Heinz bodies are seen on blood smear. Which enzyme is deficient?",
-        "options": ["A. Pyruvate kinase", "B. Glucose-6-Phosphate Dehydrogenase (G6PD)", "C. Glutathione reductase", "D. Transketolase"],
-        "answer": "B. Glucose-6-Phosphate Dehydrogenase (G6PD)",
-        "exp": "G6PD deficiency reduces NADPH production in RBCs, impairing glutathione reduction and leaving RBCs vulnerable to oxidative hemolysis."
-    },
-    {
-        "id": "p3", "type": "Exceptions",
-        "q": "Mature erythrocytes depend entirely on anaerobic glycolysis for ATP generation because they lack all of the following EXCEPT:",
-        "options": ["A. Mitochondria", "B. Nucleus", "C. Cytosolic enzymes for glycolysis", "D. Electron transport chain complexes"],
-        "answer": "C. Cytosolic enzymes for glycolysis",
-        "exp": "RBCs lack mitochondria/nuclei but contain all cytosolic glycolytic enzymes."
-    },
-    {
-        "id": "p4", "type": "Direct MCQs",
-        "q": "Which hormone activates glycogen synthase in hepatocytes following a high-carbohydrate meal?",
-        "options": ["A. Glucagon", "B. Epinephrine", "C. Insulin", "D. Cortisol"],
-        "answer": "C. Insulin",
-        "exp": "Insulin activates protein phosphatase-1, dephosphorylating and activating glycogen synthase."
-    },
-    {
-        "id": "p5", "type": "Direct MCQs",
-        "q": "During starvation, what becomes the predominant fuel used by the brain to spare muscle protein?",
-        "options": ["A. Free fatty acids", "B. Ketone bodies (beta-hydroxybutyrate and acetoacetate)", "C. Branched-chain amino acids", "D. Lactate"],
-        "answer": "B. Ketone bodies (beta-hydroxybutyrate and acetoacetate)",
-        "exp": "Ketone bodies cross the BBB and supply up to 70% of brain energy during prolonged starvation."
-    },
-    {
-        "id": "p6", "type": "True or False",
-        "q": "Select the TRUE statement regarding erythrocyte metabolism during Pantothenate (Vitamin B5) deficiency:",
-        "options": ["A. Erythrocyte glycolysis is completely halted", "B. Glycolysis in red blood cells proceeds normally because it does not require Coenzyme A", "C. Pentose phosphate pathway is blocked", "D. Lactic acid synthesis is completely inhibited"],
-        "answer": "B. Glycolysis in red blood cells proceeds normally because it does not require Coenzyme A",
-        "exp": "RBC glycolysis requires no Coenzyme A, so B5 deficiency does not impair RBC ATP production."
-    },
-    {
-        "id": "p7", "type": "Exceptions",
-        "q": "All of the following TCA cycle enzymes are located in the mitochondrial matrix EXCEPT:",
-        "options": ["A. Citrate synthase", "B. Isocitrate dehydrogenase", "C. Succinate dehydrogenase", "D. Malate dehydrogenase"],
-        "answer": "C. Succinate dehydrogenase",
-        "exp": "Succinate dehydrogenase is embedded in the inner mitochondrial membrane as Complex II."
-    },
-    {
-        "id": "p8", "type": "Direct MCQs",
-        "q": "In Complex III of the electron transport chain, electrons are transferred from ubiquinol (QH2) to:",
-        "options": ["A. Cytochrome a3", "B. Cytochrome c", "C. Oxygen", "D. FMN"],
-        "answer": "B. Cytochrome c",
-        "exp": "Complex III transfers electrons from ubiquinol to cytochrome c."
-    },
-    {
-        "id": "p9", "type": "Direct MCQs",
-        "q": "Cyanide inhibits cellular respiration by binding tightly to which electron transport chain component?",
-        "options": ["A. Complex I", "B. Complex II", "C. Complex III", "D. Complex IV (Cytochrome c oxidase)"],
-        "answer": "D. Complex IV (Cytochrome c oxidase)",
-        "exp": "Cyanide binds Fe3+ in Complex IV, halting electron transfer to oxygen."
-    },
-    {
-        "id": "p10", "type": "Direct MCQs",
-        "q": "Malonyl-CoA inhibits which enzyme to prevent simultaneous fatty acid synthesis and beta-oxidation?",
-        "options": ["A. Carnitine palmitoyltransferase I (CPT-I)", "B. Acyl-CoA dehydrogenase", "C. Hormone-sensitive lipase", "D. Fatty acid synthase"],
-        "answer": "A. Carnitine palmitoyltransferase I (CPT-I)",
-        "exp": "Malonyl-CoA inhibits CPT-I, blocking fatty acyl-CoA entry into mitochondria."
-    },
-    {
-        "id": "p11", "type": "Case Scenarios",
-        "q": "A sprinter completes a 100m race. What is the primary source of ATP during the first 5-10 seconds?",
-        "options": ["A. Muscle glycogenolysis", "B. Creatine phosphate (phosphagen system)", "C. Fatty acid oxidation", "D. Liver gluconeogenesis"],
-        "answer": "B. Creatine phosphate (phosphagen system)",
-        "exp": "Creatine kinase transfers phosphate from phosphocreatine to ADP for immediate ATP during intense bursts."
-    },
-    {
-        "id": "p12", "type": "Exceptions",
-        "q": "Functions of the TCA cycle include all of the following EXCEPT:",
-        "options": ["A. Generation of NADH and FADH2", "B. Direct net synthesis of glucose from Acetyl-CoA in humans", "C. Generation of GTP by substrate-level phosphorylation", "D. Oxidation of acetyl groups to CO2 and H2O"],
-        "answer": "B. Direct net synthesis of glucose from Acetyl-CoA in humans",
-        "exp": "Humans cannot convert Acetyl-CoA into net glucose because 2 carbons enter as acetyl-CoA and 2 exit as CO2."
-    },
-    {
-        "id": "p13", "type": "Direct MCQs",
-        "q": "What is the rate-limiting enzyme of cholesterol biosynthesis, targeted by statin drugs?",
-        "options": ["A. HMG-CoA lyase", "B. HMG-CoA reductase", "C. Squalene synthase", "D. Mevalonate kinase"],
-        "answer": "B. HMG-CoA reductase",
-        "exp": "HMG-CoA reductase converts HMG-CoA to mevalonate and is inhibited by statins."
-    },
-    {
-        "id": "p14", "type": "Case Scenarios",
-        "q": "How do statins lower blood LDL cholesterol levels?",
-        "options": ["A. Decreases intestinal fat absorption", "B. Up-regulates hepatic LDL receptor expression", "C. Degrades apolipoprotein B-100", "D. Increases cholesterol secretion in bile"],
-        "answer": "B. Up-regulates hepatic LDL receptor expression",
-        "exp": "Reduced intracellular hepatic cholesterol increases LDL receptor transcription, accelerating clearance of circulating LDL."
-    },
-    {
-        "id": "p15", "type": "Direct MCQs",
-        "q": "What is the rate-limiting enzyme of the Urea Cycle?",
-        "options": ["A. Carbamoyl Phosphate Synthetase II (CPS II)", "B. Carbamoyl Phosphate Synthetase I (CPS I)", "C. Ornithine Transcarbamoylase (OTC)", "D. Argininosuccinate Synthetase"],
-        "answer": "B. Carbamoyl Phosphate Synthetase I (CPS I)",
-        "exp": "CPS I in mitochondria is rate-limiting and requires N-acetylglutamate (NAG) for activity."
-    },
-    {
-        "id": "p16", "type": "Direct MCQs",
-        "q": "Arginase catalyzes which step in the Urea Cycle?",
-        "options": ["A. Cleavage of Argininosuccinate to Arginine and Fumarate", "B. Hydrolysis of Arginine to Ornithine and Urea", "C. Condensation of Citrulline and Aspartate", "D. Formation of Carbamoyl Phosphate"],
-        "answer": "B. Hydrolysis of Arginine to Ornithine and Urea",
-        "exp": "Arginase hydrolyzes arginine to release free urea and regenerate ornithine."
-    },
-    {
-        "id": "p17", "type": "Exceptions",
-        "q": "All of the following amino acids are both glucogenic and ketogenic EXCEPT:",
-        "options": ["A. Phenylalanine", "B. Isoleucine", "C. Tyrosine", "D. Leucine"],
-        "answer": "D. Leucine",
-        "exp": "Leucine and Lysine are purely ketogenic."
-    },
-    {
-        "id": "p18", "type": "Direct MCQs",
-        "q": "Which major organ is the primary site of ammonia detoxification via urea synthesis?",
-        "options": ["A. Kidney", "B. Brain", "C. Liver", "D. Skeletal muscle"],
-        "answer": "C. Liver",
-        "exp": "The liver is the sole organ containing all urea cycle enzymes."
-    },
-    {
-        "id": "p19", "type": "Case Scenarios",
-        "q": "An athlete experiences muscle cramps and myoglobinuria after intense exercise. Biopsy shows lipid vacuoles and impaired long-chain fatty acid oxidation. What is the defect?",
-        "options": ["A. Carnitine Palmitoyltransferase II / Carnitine deficiency", "B. MCAD deficiency", "C. G6Pase deficiency", "D. Myophosphorylase deficiency"],
-        "answer": "A. Carnitine Palmitoyltransferase II / Carnitine deficiency",
-        "exp": "CPT II / carnitine deficiency impairs mitochondrial long-chain fatty acid entry, causing rhabdomyolysis and muscle lipid accumulation."
-    },
-    {
-        "id": "p20", "type": "True or False",
-        "q": "Select the TRUE statement regarding high cellular energy charge ([ATP]/[ADP] ratio):",
-        "options": ["A. High energy charge stimulates PFK-1 and Isocitrate Dehydrogenase", "B. High energy charge inhibits catabolic glycolysis/TCA cycle and promotes anabolic pathways", "C. High energy charge activates PDH phosphatase", "D. High energy charge promotes AMPK"],
-        "answer": "B. High energy charge inhibits catabolic glycolysis/TCA cycle and promotes anabolic pathways",
-        "exp": "High ATP/NADH allosterically inhibits catabolic pathways."
-    },
-    {
-        "id": "p21", "type": "Direct MCQs",
-        "q": "Which enzyme enables extrahepatic tissues to utilize ketone bodies?",
-        "options": ["A. HMG-CoA synthase", "B. Thiophorase (Beta-ketoacyl-CoA transferase)", "C. Acetoacetyl-CoA synthetase", "D. Acetyl-CoA carboxylase"],
-        "answer": "B. Thiophorase (Beta-ketoacyl-CoA transferase)",
-        "exp": "Thiophorase activates acetoacetate to acetoacetyl-CoA in extrahepatic cells; liver lacks this enzyme."
-    },
-    {
-        "id": "p22", "type": "Exceptions",
-        "q": "Which of the following compounds is NOT derived from Tryptophan metabolism?",
-        "options": ["A. Niacin", "B. Serotonin", "C. Melatonin", "D. Epinephrine"],
-        "answer": "D. Epinephrine",
-        "exp": "Epinephrine is synthesized from Tyrosine; Tryptophan yields Serotonin, Melatonin, and Niacin."
-    }
-]
+    if not search_query or conn is None:
+        return None
 
-# QUESTION BANK: ANATOMY & NUTRITION (20 Questions)
-q_anatomy = [
-    {
-        "id": "a1", "type": "Direct MCQs",
-        "q": "Visual phototransduction in rod photoreceptors involves conversion of 11-cis-retinal into:",
-        "options": ["A. 9-cis-retinal", "B. All-trans-retinal", "C. beta-carotene", "D. Retinoic acid"],
-        "answer": "B. All-trans-retinal",
-        "exp": "Light absorption isomerizes 11-cis-retinal to all-trans-retinal, activating rhodopsin."
-    },
-    {
-        "id": "a2", "type": "Case Scenarios",
-        "q": "A 34-year-old woman with chronic low calcium intake presents with bone fractures. Which bone component is primarily compromised?",
-        "options": ["A. Osteoid (collagen matrix)", "B. Hydroxyapatite crystals [Ca10(PO4)6(OH)2]", "C. Sharpey fibers", "D. Osteoclast lysosomes"],
-        "answer": "B. Hydroxyapatite crystals [Ca10(PO4)6(OH)2]",
-        "exp": "Calcium deficiency impairs osteoid mineralization into hydroxyapatite crystals."
-    },
-    {
-        "id": "a3", "type": "Case Scenarios",
-        "q": "A 2-year-old child presents with 'matchstick' thin limbs, total wasting of subcutaneous fat, but NO edema or fatty liver. What is the diagnosis?",
-        "options": ["A. Kwashiorkor", "B. Marasmus", "C. Scurvy", "D. Rickets"],
-        "answer": "B. Marasmus",
-        "exp": "Marasmus is severe calorie deficiency leading to muscle and fat wasting without edema."
-    },
-    {
-        "id": "a4", "type": "Case Scenarios",
-        "q": "A 3-year-old child presents with generalized pitting edema, distended abdomen ('pot belly'), and fatty liver hepatomegaly. What is the diagnosis?",
-        "options": ["A. Marasmus", "B. Kwashiorkor", "C. Pellagra", "D. Beriberi"],
-        "answer": "B. Kwashiorkor",
-        "exp": "Kwashiorkor is severe protein deficiency causing hypoalbuminemic edema and hepatomegaly due to failed apolipoprotein synthesis."
-    },
-    {
-        "id": "a5", "type": "Direct MCQs",
-        "q": "Membranes of thermophilic organisms adapted to high environmental temperatures are enriched in:",
-        "options": ["A. Polyunsaturated fatty acids", "B. Saturated fatty acids", "C. Short-chain cis-unsaturated fatty acids", "D. Free glycerol"],
-        "answer": "B. Saturated fatty acids",
-        "exp": "Saturated fatty acids pack tightly, preventing fluidization at high temperatures."
-    },
-    {
-        "id": "a6", "type": "Direct MCQs",
-        "q": "Vitamin E (alpha-tocopherol) functions in cell membranes primarily as a:",
-        "options": ["A. Coenzyme for carboxylation", "B. Lipophilic antioxidant preventing lipid peroxidation", "C. Transcription factor for collagen", "D. Visual pigment precursor"],
-        "answer": "B. Lipophilic antioxidant preventing lipid peroxidation",
-        "exp": "Vitamin E protects cell membrane polyunsaturated lipids against free radical damage."
-    },
-    {
-        "id": "a7", "type": "Exceptions",
-        "q": "Symptoms of Vitamin B6 (Pyridoxine) deficiency include all of the following EXCEPT:",
-        "options": ["A. Sideroblastic anemia", "B. Peripheral neuropathy", "C. Impaired transamination", "D. Macrocytic megaloblastic anemia"],
-        "answer": "D. Macrocytic megaloblastic anemia",
-        "exp": "Vitamin B6 deficiency causes microcytic sideroblastic anemia (ALA synthase requires PLP); macrocytic anemia is B12/Folate deficiency."
-    },
-    {
-        "id": "a8", "type": "Direct MCQs",
-        "q": "Primary structural surfactant component lacking in infant Respiratory Distress Syndrome (RDS) is:",
-        "options": ["A. Sphingomyelin", "B. Dipalmitoylphosphatidylcholine", "C. Phosphatidylinositol", "D. Albumin"],
-        "answer": "B. Dipalmitoylphosphatidylcholine",
-        "exp": "Dipalmitoylphosphatidylcholine (lecithin) is the major surface-active component of lung surfactant."
-    },
-    {
-        "id": "a9", "type": "Case Scenarios",
-        "q": "Arsenic toxicity inhibits lipoic acid-dependent enzyme complexes. Which metabolites accumulate in blood?",
-        "options": ["A. Glucose and Oxaloacetate", "B. Pyruvate and Lactate", "C. Acetyl-CoA and Citrate", "D. Succinate and Malate"],
-        "answer": "B. Pyruvate and Lactate",
-        "exp": "Arsenite inhibits PDH and alpha-ketoglutarate dehydrogenase, backing up pyruvate into lactate."
-    },
-    {
-        "id": "a10", "type": "Direct MCQs",
-        "q": "Serum ferritin level serves as the most sensitive clinical marker for:",
-        "options": ["A. Transferrin saturation", "B. Total body iron stores", "C. Intestinal iron absorption rate", "D. Hemoglobin concentration"],
-        "answer": "B. Total body iron stores",
-        "exp": "Serum ferritin correlates directly with intracellular body iron reserves."
-    },
-    {
-        "id": "a11", "type": "Direct MCQs",
-        "q": "Fat-soluble vitamins (A, D, E, K) enter intestinal enterocytes via incorporation into:",
-        "options": ["A. Free fatty acid transporters", "B. Mixed bile salt micelles", "C. Lipoprotein lipase complexes", "D. Chylomicron remnants"],
-        "answer": "B. Mixed bile salt micelles",
-        "exp": "Bile salts and lipids form amphipathic mixed micelles to transport fat-soluble vitamins across enterocyte brush borders."
-    },
-    {
-        "id": "a12", "type": "True or False",
-        "q": "Select the TRUE statement regarding essential fatty acids:",
-        "options": ["A. Oleic acid is an essential fatty acid", "B. Linoleic acid (omega-6) and Alpha-linolenic acid (omega-3) cannot be synthesized de novo by humans", "C. Palmitic acid is an essential fatty acid", "D. Stearic acid is the precursor for leukotrienes"],
-        "answer": "B. Linoleic acid (omega-6) and Alpha-linolenic acid (omega-3) cannot be synthesized de novo by humans",
-        "exp": "Humans lack desaturases to insert double bonds beyond C9, making linoleic and alpha-linolenic acids essential."
-    },
-    {
-        "id": "a13", "type": "Direct MCQs",
-        "q": "Which tissue stores the majority of triacylglycerol reserves in the human body?",
-        "options": ["A. Skeletal muscle", "B. Liver", "C. White adipose tissue", "D. Brown adipose tissue"],
-        "answer": "C. White adipose tissue",
-        "exp": "White adipocytes store unilocular TAG droplets for systemic energy."
-    },
-    {
-        "id": "a14", "type": "Exceptions",
-        "q": "All of the following are water-soluble vitamins that act as enzyme cofactors EXCEPT:",
-        "options": ["A. Thiamine (B1)", "B. Riboflavin (B2)", "C. Ascorbic acid (Vitamin C)", "D. Tocopherol (Vitamin E)"],
-        "answer": "D. Tocopherol (Vitamin E)",
-        "exp": "Vitamin E is lipid-soluble."
-    },
-    {
-        "id": "a15", "type": "Case Scenarios",
-        "q": "A patient with bleeding gums, petechiae, and poor wound healing has a deficiency of:",
-        "options": ["A. Ascorbic acid (Vitamin C)", "B. Niacin (Vitamin B3)", "C. Thiamine (Vitamin B1)", "D. Vitamin D"],
-        "answer": "A. Ascorbic acid (Vitamin C)",
-        "exp": "Scurvy results from Vitamin C deficiency, impairing prolyl/lysyl hydroxylase in collagen synthesis."
-    },
-    {
-        "id": "a16", "type": "Direct MCQs",
-        "q": "Pellagra (Dermatitis, Diarrhea, Dementia) is caused by deficiency of:",
-        "options": ["A. Thiamine", "B. Niacin (B3) or Tryptophan", "C. Folate", "D. Riboflavin"],
-        "answer": "B. Niacin (B3) or Tryptophan",
-        "exp": "Pellagra results from Niacin or precursor Tryptophan deficiency."
-    },
-    {
-        "id": "a17", "type": "Exceptions",
-        "q": "Which condition is NOT associated with Vitamin D deficiency?",
-        "options": ["A. Rickets in children", "B. Osteomalacia in adults", "C. Hypocalcemia", "D. Sideroblastic anemia"],
-        "answer": "D. Sideroblastic anemia",
-        "exp": "Sideroblastic anemia is associated with Vitamin B6 deficiency or lead toxicity."
-    },
-    {
-        "id": "a18", "type": "Direct MCQs",
-        "q": "Wernicke-Korsakoff syndrome in chronic alcoholism results from deficiency of:",
-        "options": ["A. Thiamine (B1)", "B. Pyridoxine (B6)", "C. Cobalamin (B12)", "D. Folate"],
-        "answer": "A. Thiamine (B1)",
-        "exp": "Thiamine deficiency impairs TPP-dependent enzymes (PDH, alpha-KGDH, transketolase)."
-    },
-    {
-        "id": "a19", "type": "Direct MCQs",
-        "q": "Which apolipoprotein activates Lipoprotein Lipase (LPL) on capillary endothelium?",
-        "options": ["A. ApoA-1", "B. ApoC-II", "C. ApoE", "D. ApoB-100"],
-        "answer": "B. ApoC-II",
-        "exp": "ApoC-II on chylomicrons and VLDL activates LPL to release free fatty acids."
-    },
-    {
-        "id": "a20", "type": "Direct MCQs",
-        "q": "Deficiency of ApoB-48 and ApoB-100 causes which hereditary lipid disorder?",
-        "options": ["A. Familial Hypercholesterolemia", "B. Abetalipoproteinemia", "C. Tangier Disease", "D. Type I Hyperchylomicronemia"],
-        "answer": "B. Abetalipoproteinemia",
-        "exp": "MTP gene mutations prevent ApoB assembly, resulting in Abetalipoproteinemia (absence of chylomicrons, VLDL, and LDL)."
-    }
-]
-
-def render_quiz(q_list, tab_key):
-    st.write(f"**Total Questions: {len(q_list)}**")
-    filter_type = st.selectbox(f"Filter Question Type ({tab_key}):", ["All", "Case Scenarios", "Direct MCQs", "True or False", "Exceptions"], key=f"f_{tab_key}")
-    filtered = q_list if filter_type == "All" else [q for q in q_list if q['type'] == filter_type]
-    
-    score = 0
-    submitted_count = 0
-    
-    for idx, item in enumerate(filtered):
-        st.markdown("---")
-        st.markdown(f"**Q{idx+1} [{item['type']}]: {item['q']}**")
-        ans_key = f"key_{tab_key}_{item['id']}"
-        choice = st.radio("Select option:", item['options'], key=ans_key)
+    try:
+        # Read the Student_Roster tab from Google Sheets
+        roster_df = conn.read(worksheet="Student_Roster", ttl=60)
+        roster_df.columns = roster_df.columns.str.strip().str.lower()
         
-        if st.button(f"Submit Q{idx+1}", key=f"btn_{ans_key}"):
-            st.session_state.answers[ans_key] = choice
+        # Locate ID and Name columns dynamically
+        id_cols = [c for c in roster_df.columns if "id" in c]
+        name_cols = [c for c in roster_df.columns if "name" in c]
+
+        if id_cols and name_cols:
+            id_col = id_cols[0]
+            name_col = name_cols[0]
             
-        if ans_key in st.session_state.answers:
-            submitted_count += 1
-            user_ans = st.session_state.answers[ans_key]
-            if user_ans == item['answer']:
-                st.success("✅ Correct!")
-                score += 1
+            # Clean ID series (removes trailing .0 from float conversions)
+            id_series = (
+                roster_df[id_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+                .str.replace(r"\.0$", "", regex=True)
+            )
+            
+            # Clean Name series
+            name_series = (
+                roster_df[name_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+            
+            # Check for match in either ID or Name
+            match = roster_df[(id_series == search_query) | (name_series == search_query)]
+            
+            if not match.empty:
+                row = match.iloc[0]
+                clean_id = str(row[id_col]).strip()
+                if clean_id.endswith(".0"):
+                    clean_id = clean_id[:-2]
+                    
+                return {
+                    "id": clean_id,
+                    "name": str(row[name_col]).strip()
+                }
+    except Exception as e:
+        st.error(f"Roster check error: {e}")
+        
+    return None
+
+
+# ------------------------------------------------------------------------------
+# 3. SINGLE INPUT VERIFICATION GATE (LOCKS APP UNTIL VERIFIED)
+# ------------------------------------------------------------------------------
+if st.session_state.verified_user is None:
+    st.title("🎓 Medical Science Professional Exam Portal")
+    st.subheader("🔒 Student Identity Verification")
+    st.caption("Please enter your official Student ID or Full Name once to unlock the quiz.")
+
+    user_input = st.text_input("Student ID or Full Name:", placeholder="e.g. ST203001, 203001, or Jane Doe", key="login_field")
+    
+    if st.button("Verify & Enter Quiz 🚀"):
+        if user_input.strip():
+            with st.spinner("Verifying against official student roster..."):
+                student_info = verify_student(user_input)
+                
+            if student_info:
+                st.session_state.verified_user = student_info
+                st.rerun()  # Instantly reloads page directly into the quiz
             else:
-                st.error(f"❌ Incorrect. Correct Answer: **{item['answer']}**")
-            with st.expander("💡 High-Yield Explanation"):
-                st.info(item['exp'])
+                st.error("❌ **Access Denied:** ID or Name not found in the official student roster. Please check for typos.")
+        else:
+            st.warning("⚠️ Please enter your Student ID or Name.")
 
-with tabs[0]:
-    render_quiz(q_biochem, "biochem")
+    st.stop()  # Prevents unverified users from viewing questions below
 
-with tabs[1]:
-    render_quiz(q_physio, "physio")
 
-with tabs[2]:
-    render_quiz(q_anatomy, "anatomy")
+# ------------------------------------------------------------------------------
+# 4. RESPONSE LOGGING FUNCTION
+# ------------------------------------------------------------------------------
+def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
+    if conn is None or st.session_state.verified_user is None:
+        return
+        
+    student = st.session_state.verified_user
+    
+    try:
+        # Reads from the tab named after the module (e.g. "MSPC232")
+        existing_df = conn.read(worksheet=module_name, ttl=0)
+    except Exception:
+        existing_df = pd.DataFrame(columns=[
+            "Timestamp", "Student_ID", "Student_Name", "Module", 
+            "Category", "Question", "Selected_Option", "Correct_Answer", "Is_Correct"
+        ])
+
+    new_entry = pd.DataFrame([{
+        "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Student_ID": student["id"],
+        "Student_Name": student["name"],
+        "Module": module_name,
+        "Category": category,
+        "Question": question_text[:80] + "...",
+        "Selected_Option": selected_option,
+        "Correct_Answer": correct_answer,
+        "Is_Correct": "Correct" if is_correct else "Incorrect"
+    }])
+
+    updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
+    conn.update(worksheet=module_name, data=updated_df)
+    st.toast("Response recorded to Google Sheets! ✅")
+
+
+# ------------------------------------------------------------------------------
+# 5. MAIN QUIZ INTERFACE & CATEGORY RENDERER
+# ------------------------------------------------------------------------------
+student = st.session_state.verified_user
+
+# Sidebar Identity & Logout
+st.sidebar.markdown(f"👤 **Logged-in Student:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
+
+if st.sidebar.button("Log Out / Switch Student"):
+    st.session_state.verified_user = None
+    st.rerun()
+
+st.title("🎓 MSPC232: Medical Biochemistry & Bioenergetics")
+st.caption("Interactive Comprehensive Question Bank grounded in Compiled Past Exam Questions.")
+
+tab1, tab2, tab3 = st.tabs(["🫀 Part 1: Anatomy & Histology", "⚡ Part 2: Physiology & Pathophysiology", "🧪 Part 3: Biochemistry, Pharmacology & Clinical Scenarios"])
+
+def render_question_list(questions, category_name, prefix):
+    for idx, q in enumerate(questions):
+        q_label = f"[{q.get('type', 'MCQ')}] {q['question']}" if 'type' in q else q['question']
+        st.subheader(f"Q{idx+1}. {q_label}")
+        key = f"{prefix}_{idx+1}"
+        
+        user_choice = st.radio("Select your answer:", q["options"], key=key, index=None)
+        
+        if user_choice is not None:
+            selected_letter = user_choice[0]
+            is_correct = (selected_letter == q["answer"])
+            
+            if is_correct:
+                st.success(f"Correct! 🎉\n\n**Explanation:** {q['explanation']}")
+            else:
+                st.error(f"Incorrect. Correct Answer: **{q['answer']}**\n\n**Explanation:** {q['explanation']}")
+            
+            if f"logged_{key}" not in st.session_state:
+                log_response(
+                    module_name="MSPC232",
+                    category=category_name,
+                    question_text=q["question"],
+                    selected_option=selected_letter,
+                    correct_answer=q["answer"],
+                    is_correct=is_correct
+                )
+                st.session_state[f"logged_{key}"] = True
+        st.divider()
+
+q_tab1 = [
+    {
+        "type": "Case Scenario",
+        "question": "A 34-year-old woman presents with multiple stress fractures. Investigations reveal a long-standing history of a severely low-calcium diet. Which structural component of bone tissue is primarily compromised?",
+        "options": ["A. Osteoid (collagen matrix)", "B. Hydroxyapatite crystals", "C. Osteocytes", "D. Bone marrow"],
+        "answer": "B",
+        "explanation": "Hydroxyapatite crystals provide the inorganic mineral strength of bone. Chronic calcium deficiency impairs hydroxyapatite crystallization, leaving osteoid unmineralized."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 5-year-old boy in a rural clinic weighs 11 kg (predicted 20 kg) with severe skeletal muscle wasting, loss of subcutaneous fat, and 'matchstick' limbs, but NO edema or abdominal distension. What is the diagnosis?",
+        "options": ["A. Kwashiorkor", "B. Marasmus", "C. Scurvy", "D. Pellagra"],
+        "answer": "B",
+        "explanation": "Marasmus results from severe calorie and protein deficiency leading to loss of subcutaneous fat and severe muscle wasting without hepatic fatty change or edema."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Characteristics of Kwashiorkor include all of the following EXCEPT:",
+        "options": ["A. Generalized edema", "B. Fatty liver infiltration", "C. Complete loss of subcutaneous fat", "D. Subcutaneous fat retention with growth impairment"],
+        "answer": "C",
+        "explanation": "Kwashiorkor patients retain some subcutaneous fat but develop marked edema (hypoalbuminemia) and fatty liver due to impaired VLDL synthesis."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which amino acid hydroxyl residues form O-glycosidic linkages with carbohydrate moieties during glycoprotein synthesis?",
+        "options": ["A. Serine and Threonine", "B. Glutamine and Asparagine", "C. Lysine and Arginine", "D. Alanine and Valine"],
+        "answer": "A",
+        "explanation": "Serine and Threonine contain side-chain hydroxyl groups (-OH) that form O-glycosidic linkages, whereas Asparagine forms N-glycosidic bonds."
+    },
+    {
+        "type": "Direct Question",
+        "question": "In rod photoreceptor cells, visual phototransduction involves which conversion during light exposure?",
+        "options": ["A. All-trans-retinal to 11-cis-retinal", "B. 11-cis-retinal to all-trans-retinal", "C. Retinol to retinoic acid", "D. Opsin to rhodopsin synthesis"],
+        "answer": "B",
+        "explanation": "Absorption of a photon by rhodopsin isomerizes 11-cis-retinal to all-trans-retinal, activating transducin."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Saturated fatty acids dominate cell membranes of organisms adapted to high environmental temperatures to prevent excessive membrane fluidity.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Saturated fatty acids lack double bonds, allowing tight packing which stabilizes the cell membrane against thermal hyper-fluidity."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which four-carbon monosaccharide is classified as a tetraketose?",
+        "options": ["A. Erythrulose", "B. Erythrose", "C. Fructose", "D. Ribulose"],
+        "answer": "A",
+        "explanation": "Erythrulose is a 4-carbon ketose (tetraketose). Erythrose is an aldotetrose."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A premature infant delivered at 28 weeks gestation exhibits severe respiratory distress syndrome (RDS). Which phospholipid component of pulmonary surfactant is deficient?",
+        "options": ["A. Dipalmitoylphosphatidylcholine (Lecithin)", "B. Sphingomyelin", "C. Phosphatidylglycerol", "D. Phosphatidylinositol"],
+        "answer": "A",
+        "explanation": "Dipalmitoylphosphatidylcholine reduces alveolar surface tension; its lack causes alveolar collapse in premature infants."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following lipid classes contain fatty acid components EXCEPT:",
+        "options": ["A. Cholesteryl esters", "B. Sphingolipids", "C. Phospholipids", "D. None of the above (All contain fatty acids)"],
+        "answer": "D",
+        "explanation": "Cholesteryl esters, sphingolipids, and phospholipids all possess fatty acid chains esterified or amidated to their backbones."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which liver-derived lipoprotein contains the highest proportion of triacylglycerols and possesses ApoB-100?",
+        "options": ["A. VLDL", "B. Chylomicron", "C. LDL", "D. HDL"],
+        "answer": "A",
+        "explanation": "VLDL is synthesized in hepatocytes with ApoB-100 and carries endogenous triacylglycerols."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Cis-unsaturated fatty acids introduce rigid bends in hydrocarbon chains, lowering the melting point of plant oils compared to animal fats.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Cis double bonds introduce kinks that prevent tight packing, keeping unsaturated oils liquid at room temperature."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A newborn infant presents with severe chylomicronemia and lipemic serum. Genetic testing confirms Lipoprotein Lipase (LPL) deficiency. Which apolipoprotein cofactor is required for LPL activity?",
+        "options": ["A. Apo C-II", "B. Apo B-48", "C. Apo E", "D. Apo A-I"],
+        "answer": "A",
+        "explanation": "Apo C-II is the essential obligate cofactor present on chylomicrons and VLDL that activates capillary endothelial LPL."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following metabolites are directly derived from Tryptophan EXCEPT:",
+        "options": ["A. Serotonin", "B. Melatonin", "C. Niacin (Nicotinic acid)", "D. Alpha-ketoglutarate"],
+        "answer": "D",
+        "explanation": "Tryptophan degrades to alanine, acetoacetyl-CoA, formate, niacin, and serotonin. Alpha-ketoglutarate is derived from glutamate, arginine, proline, and histidine."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which central intermediate serves as the common precursor for the synthesis of both triacylglycerols and glycerophospholipids?",
+        "options": ["A. Phosphatidic acid", "B. Diacylglycerol", "C. CDP-choline", "D. Glycerol-3-phosphate dehydrogenase"],
+        "answer": "A",
+        "explanation": "Phosphatidic acid is dephosphorylated to DAG (for TAGs) or converted to CDP-DAG (for phospholipids)."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Serum ferritin is the most sensitive laboratory index for assessing early depletion of total body iron stores.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Serum ferritin correlates directly with reticuloendothelial storage iron; low levels indicate depleted iron stores."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 52-year-old asthmatic patient takes an over-the-counter NSAID for knee arthritis and suffers severe bronchospasm. Which inflammatory mediators are elevated due to cyclooxygenase inhibition?",
+        "options": ["A. Leukotrienes (LTC4, LTD4, LTE4)", "B. Thromboxane A2", "C. Prostaglandin E2", "D. Prostacyclin PGI2"],
+        "answer": "A",
+        "explanation": "NSAIDs block COX, shunting arachidonic acid into the 5-lipoxygenase pathway and elevating bronchoconstrictive leukotrienes."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme converts free cholesterol and fatty acyl-CoA into cholesteryl esters within hepatocytes?",
+        "options": ["A. ACAT (Acyl-CoA:cholesterol acyltransferase)", "B. LCAT", "C. HMG-CoA reductase", "D. Cholesterol esterase"],
+        "answer": "A",
+        "explanation": "ACAT acts intracellularly inside tissue cells/hepatocytes, whereas LCAT acts extracellularly in HDL particles."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following amino acids possess hydrophobic, nonpolar side chains EXCEPT:",
+        "options": ["A. Leucine", "B. Isoleucine", "C. Valine", "D. Aspartate"],
+        "answer": "D",
+        "explanation": "Aspartate is a negatively charged, polar, hydrophilic amino acid. Leucine, isoleucine, and valine are branched nonpolar amino acids."
+    },
+    {
+        "type": "Direct Question",
+        "question": "What is the function of brown adipose tissue Uncoupling Protein-1 (UCP-1 / Thermogenin)?",
+        "options": ["A. Dissipate the inner mitochondrial proton gradient to generate heat", "B. Synthesize ATP rapidly during shivering", "C. Transport fatty acids across the outer mitochondrial membrane", "D. Inhibit Complex IV electron transfer"],
+        "answer": "A",
+        "explanation": "Thermogenin creates a proton leak across the inner mitochondrial membrane, uncoupling respiration from ATP synthesis to generate heat."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Vitamin E (alpha-tocopherol) functions primarily as a lipid-soluble antioxidant that prevents lipid peroxidation of cell membrane polyunsaturated fatty acids.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Vitamin E scavenges free radicals in lipid bilayers, protecting cell membranes from oxidative destruction."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 15-year-old adolescent female presents with clitoromegaly and primary amenorrhea. Serum steroid profile shows elevated 17-hydroxyprogesterone and urinary 17-ketosteroids. Which adrenal enzyme is deficient?",
+        "options": ["A. 21-alpha-hydroxylase", "B. 11-beta-hydroxylase", "C. 17-alpha-hydroxylase", "D. 3-beta-hydroxysteroid dehydrogenase"],
+        "answer": "A",
+        "explanation": "21-hydroxylase deficiency impairs cortisol/aldosterone synthesis, diverting precursors to adrenal androgens and causing virilization."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which fatty acid is an essential polyunsaturated fatty acid that must be supplied in human diets?",
+        "options": ["A. Linoleic acid (18:2 n-6)", "B. Oleic acid (18:1 n-9)", "C. Palmitic acid (16:0)", "D. Stearic acid (18:0)"],
+        "answer": "A",
+        "explanation": "Humans lack desaturase enzymes to insert double bonds beyond C-9; linoleic and alpha-linolenic acids are strictly essential."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following statements regarding collagen matrix architecture are TRUE EXCEPT:",
+        "options": ["A. Glycine occurs at every third residue (Gly-X-Y)", "B. Hydroxyproline and hydroxylysine stabilization requires Vitamin C", "C. Collagen contains a left-handed triple helix of three alpha chains", "D. Collagen synthesis is unaffected by scurvy"],
+        "answer": "D",
+        "explanation": "Vitamin C is a mandatory cofactor for prolyl and lysyl hydroxylases; deficiency causes scurvy and weak collagen triple helices."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Eicosapentaenoic acid (EPA, 20:5 n-3) yields series-3 thromboxanes (TXA3) which promote weaker platelet aggregation than arachidonic acid-derived TXA2.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "TXA3 has significantly reduced pro-aggregatory potency compared to TXA2, explaining the cardiovascular benefits of omega-3 fish oils."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which intracellular compartment contains the rate-limiting enzyme for de novo cholesterol biosynthesis (HMG-CoA Reductase)?",
+        "options": ["A. Endoplasmic reticulum membrane", "B. Mitochondrial matrix", "C. Cytosol", "D. Peroxisome"],
+        "answer": "A",
+        "explanation": "HMG-CoA Reductase is an integral membrane protein of the smooth endoplasmic reticulum with its catalytic domain facing the cytosol."
+    }
+]
+
+# Tab 2 Questions (25 MCQs)
+q_tab2 = [
+    {
+        "type": "Direct Question",
+        "question": "What is the general flow of phosphoryl group transfer potential in cellular bioenergetics?",
+        "options": ["A. High-energy phosphate compounds -> ATP -> Low-energy phosphate compounds", "B. ATP -> High-energy phosphate compounds -> Low-energy phosphate compounds", "C. Low-energy phosphate compounds -> ATP -> High-energy phosphate compounds", "D. ATP -> Low-energy phosphate compounds only"],
+        "answer": "A",
+        "explanation": "Compounds with higher transfer potential (1,3-BPG, Phosphoenolpyruvate, Creatine phosphate) transfer phosphate to ADP to make ATP, which then phosphorylates low-energy acceptors."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An untrained individual runs a 400m sprint. Two minutes in, he experiences severe muscle fatigue and cramping due to lactic acidosis. What is the metabolic purpose of converting pyruvate to lactate during anaerobic exercise?",
+        "options": ["A. Regenerate cytosolic NAD+ for continued glycolysis", "B. Generate GTP directly", "C. Produce acetyl-CoA for the TCA cycle", "D. Lower cytosolic ATP levels"],
+        "answer": "A",
+        "explanation": "Lactate dehydrogenase reduces pyruvate to lactate while oxidizing NADH back to NAD+, allowing glyceraldehyde-3-phosphate dehydrogenase to continue glycolysis."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following electron transport chain inhibitors block specific complexes EXCEPT:",
+        "options": ["A. Rotenone - Complex I", "B. Antimycin A - Complex III", "C. Cyanide - Complex IV", "D. 2,4-Dinitrophenol (DNP) - Complex II"],
+        "answer": "D",
+        "explanation": "DNP is a synthetic protonophore (uncoupler) that dissipates the proton gradient across the inner mitochondrial membrane, not an electron transport complex inhibitor."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme of the Tricarboxylic Acid (TCA) cycle is embedded directly in the inner mitochondrial membrane and participates in the Electron Transport Chain as Complex II?",
+        "options": ["A. Succinate dehydrogenase", "B. Isocitrate dehydrogenase", "C. Malate dehydrogenase", "D. Alpha-ketoglutarate dehydrogenase"],
+        "answer": "A",
+        "explanation": "Succinate dehydrogenase catalyzes the oxidation of succinate to fumarate while reducing FAD to FADH2 within Complex II."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Mature human red blood cells rely exclusively on anaerobic glycolysis for ATP generation because they lack mitochondria.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Erythrocytes lose all organelles during maturation; they convert glucose to lactate to generate 2 ATP per glucose."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient with severe Glucose-6-Phosphate Dehydrogenase (G6PD) deficiency develops acute hemolytic anemia after starting primaquine. Which pathway is impaired, preventing glutathione reduction?",
+        "options": ["A. Pentose Phosphate Pathway", "B. Glycolysis", "C. TCA Cycle", "D. Gluconeogenesis"],
+        "answer": "A",
+        "explanation": "G6PD is the rate-limiting enzyme of the Hexose Monophosphate Shunt (PPP), producing NADPH needed by glutathione reductase to neutralize reactive oxygen species."
+    },
+    {
+        "type": "Direct Question",
+        "question": "What effect does a high mitochondrial energy charge (high ATP/ADP and NADH/NAD+ ratios) have on metabolic enzymes?",
+        "options": ["A. Inhibits Isocitrate Dehydrogenase, Pyruvate Dehydrogenase, and PFK-1", "B. Stimulates Pyruvate Dehydrogenase and Citrate Synthase", "C. Activates Glycolysis and glycogen breakdown", "D. Stimulates Complex I and Complex III"],
+        "answer": "A",
+        "explanation": "Abundant ATP and NADH signal energy sufficiency, allosterically inhibiting key regulatory enzymes in oxidative pathways."
+    },
+    {
+        "type": "Exception Question",
+        "question": "The Pyruvate Dehydrogenase (PDH) complex requires all of the following coenzymes EXCEPT:",
+        "options": ["A. Thiamine pyrophosphate (TPP)", "B. Lipoic acid and Coenzyme A", "C. FAD and NAD+", "D. Biotin"],
+        "answer": "D",
+        "explanation": "PDH requires 5 coenzymes: TPP, Lipoamide, CoA, FAD, and NAD+. Biotin is required by carboxylases (e.g., Pyruvate Carboxylase)."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: In mitochondrial oxidative phosphorylation, molecular oxygen (O2) serves as the final terminal electron acceptor.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Complex IV (Cytochrome c oxidase) transfers electrons to O2, reducing it to H2O."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An industrial worker accidentally ingests sodium cyanide. Cyanide binds tightly to the ferric (Fe3+) iron in Cytochrome a3 of Complex IV. What is the immediate biochemical consequence?",
+        "options": ["A. Complete arrest of electron transport and collapse of the proton gradient", "B. Uncoupling of ATP synthesis with hyperthermia", "C. Accelerated NADH oxidation", "D. Increased mitochondrial O2 consumption"],
+        "answer": "A",
+        "explanation": "Blocking Complex IV halts all upstream electron transfer, preventing proton pumping and terminating oxidative phosphorylation."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Why is the hydrolysis of inorganic pyrophosphate (PPi -> 2 Pi) by pyrophosphatase crucial in synthetic biosynthetic pathways?",
+        "options": ["A. It drives endergonic activation reactions forward by eliminating product", "B. It generates extra ATP directly", "C. It reduces NAD+ to NADH", "D. It inhibits uncoupling proteins"],
+        "answer": "A",
+        "explanation": "Pyrophosphate hydrolysis has a large negative Delta G (~ -7 kcal/mol), pulling reactions like fatty acid activation and nucleic acid synthesis to completion."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following statements about the TCA cycle are TRUE EXCEPT:",
+        "options": ["A. It operates strictly under aerobic conditions", "B. It produces 3 NADH, 1 FADH2, and 1 GTP per acetyl-CoA", "C. It provides net synthesis of glucose directly from acetyl-CoA", "D. It provides intermediates for amino acid and heme synthesis"],
+        "answer": "C",
+        "explanation": "Acetyl-CoA enters the TCA cycle as 2 carbons and is lost as 2 CO2 molecules; humans cannot achieve net gluconeogenesis from acetyl-CoA."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: The actual intracellular free energy change (Delta G) of ATP hydrolysis in living cells is identical to the standard free energy change (Delta G°').",
+        "options": ["A. True", "B. False"],
+        "answer": "B",
+        "explanation": "Delta G°' is measured at 1M standard concentrations. In vivo concentrations of ATP, ADP, and Pi differ markedly, making actual Delta G much more negative (~ -12 kcal/mol)."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A teenager ingests 2,4-Dinitrophenol (DNP) to lose weight. She is rushed to the ER with extreme hyperthermia, tachypnea, and metabolic acidosis. What is the mechanism of DNP toxicity?",
+        "options": ["A. Proton gradient dissipation leading to energy release as heat instead of ATP", "B. Inhibition of ATP synthase catalytic subunit", "C. Irreversible blockade of Complex I", "D. Inhibition of carnitine palmitoyltransferase-1"],
+        "answer": "A",
+        "explanation": "DNP shuttles protons across the inner mitochondrial membrane into the matrix, bypassing ATP synthase. Respiration runs at maximum rate, releasing metabolic energy as heat."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme converts pyruvate to oxaloacetate in the mitochondrion, initiating gluconeogenesis?",
+        "options": ["A. Pyruvate carboxylase", "B. Pyruvate kinase", "C. Malate dehydrogenase", "D. PEP carboxykinase"],
+        "answer": "A",
+        "explanation": "Pyruvate carboxylase is a biotin-dependent mitochondrial enzyme that converts pyruvate + CO2 + ATP into oxaloacetate."
+    },
+    {
+        "type": "Exception Question",
+        "question": "During prolonged starvation (3+ weeks), which tissue or organ CANNOT use ketone bodies (acetoacetate, beta-hydroxybutyrate) as fuel?",
+        "options": ["A. Brain", "B. Skeletal muscle", "C. Red blood cells", "D. Myocardium"],
+        "answer": "C",
+        "explanation": "Red blood cells lack mitochondria and therefore lack thiophorase (beta-ketoacyl-CoA transferase), preventing ketone body oxidation."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Arsenic poisoning causes toxic inhibition of lipoic acid-dependent enzyme complexes, including Pyruvate Dehydrogenase and Alpha-Ketoglutarate Dehydrogenase.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Arsenite binds vicinal sulfhydryl groups of lipoamide, inactivating PDH and alpha-KGDH, causing pyruvate/lactate accumulation."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A marathon runner 'hits the wall' at mile 20. Which endogenous fuel reserve has been depleted, forcing reliance on slower fatty acid oxidation?",
+        "options": ["A. Liver and muscle glycogen", "B. Subcutaneous triacylglycerols", "C. Circulating ketone bodies", "D. Muscle protein"],
+        "answer": "A",
+        "explanation": "Glycogen depletion limits rapid ATP generation via glycolysis, causing sudden physical fatigue."
+    },
+    {
+        "type": "Direct Question",
+        "question": "How does insulin regulate key rate-limiting enzymes of fed-state metabolic pathways (e.g., Glycogen Synthase, Acetyl-CoA Carboxylase)?",
+        "options": ["A. Promotes enzyme dephosphorylation via Protein Phosphatase-1", "B. Promotes cAMP-dependent phosphorylation", "C. Allosterically inhibits gene transcription", "D. Degrades intracellular phosphatases"],
+        "answer": "A",
+        "explanation": "Insulin signaling activates protein phosphatases that dephosphorylate glycogen synthase and acetyl-CoA carboxylase, converting them into active forms."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following conditions shift the hemoglobin oxygen dissociation curve to the RIGHT (promoting O2 unloading) EXCEPT:",
+        "options": ["A. Increased 2,3-BPG", "B. Increased H+ (decreased pH)", "C. Increased temperature", "D. Decreased pCO2"],
+        "answer": "D",
+        "explanation": "Decreased pCO2 (or alkalosis) shifts the O2 dissociation curve to the LEFT, increasing hemoglobin affinity for oxygen."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Glucagon signaling via GPCRs activates Protein Kinase A, causing phosphorylation and inactivation of Glycogen Synthase and Pyruvate Kinase in hepatocytes.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Glucagon elevates cAMP, activating PKA which phosphorylates rate-limiting glycolytic/glycogenic enzymes, turning off glucose consumption."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which shuttle mechanism transfers cytosolic NADH electrons into the mitochondrial matrix yielding ~2.5 ATP per pair in heart and liver?",
+        "options": ["A. Malate-Aspartate Shuttle", "B. Glycerol-3-Phosphate Shuttle", "C. Citrate-Malate Shuttle", "D. Carnitine Shuttle"],
+        "answer": "A",
+        "explanation": "The Malate-Aspartate shuttle transfers electrons to mitochondrial NAD+, yielding ~2.5 ATP via Complex I."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An infant develops hypoglycemia, lethargy, and hypoketosis during an episode of viral gastroenteritis with poor feeding. Urinalysis shows dicarboxylic aciduria. What metabolic defect is present?",
+        "options": ["A. Medium-Chain Acyl-CoA Dehydrogenase (MCAD) deficiency", "B. Pyruvate kinase deficiency", "C. Glucose-6-phosphatase deficiency", "D. Carnitine palmitoyltransferase II deficiency"],
+        "answer": "A",
+        "explanation": "MCAD deficiency impairs beta-oxidation of 6- to 12-carbon fatty acids, preventing ketone body formation and causing fasting hypoglycemia."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which metabolite allosterically activates Acetyl-CoA Carboxylase (ACC) to promote de novo fatty acid synthesis in the fed state?",
+        "options": ["A. Citrate", "B. Palmitoyl-CoA", "C. AMP", "D. Glucagon"],
+        "answer": "A",
+        "explanation": "Citrate signals abundant mitochondrial acetyl-CoA and energy, polymerizing and activating ACC in the cytosol."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following statements concerning Myoglobin vs Hemoglobin oxygen binding are TRUE EXCEPT:",
+        "options": ["A. Myoglobin displays a hyperbolic oxygen saturation curve", "B. Hemoglobin displays a sigmoidal oxygen saturation curve due to cooperativity", "C. Myoglobin has a higher affinity for oxygen than hemoglobin", "D. Myoglobin exhibits allosteric regulation by 2,3-BPG"],
+        "answer": "D",
+        "explanation": "Myoglobin is a monomeric protein with a single oxygen-binding heme site; it lacks quaternary structure and is NOT regulated by 2,3-BPG."
+    }
+]
+
+# Tab 3 Questions (25 MCQs)
+q_tab3 = [
+    {
+        "type": "Case Scenario",
+        "question": "A 2-week-old infant suffers from vomiting, diarrhea, jaundice, and cataracts after milk feeds. Laboratory screening reveals galactosaemia. Which enzyme is most commonly deficient in classic galactosemia?",
+        "options": ["A. Galactose-1-phosphate uridyltransferase (GALT)", "B. Galactokinase", "C. UDP-galactose epimerase", "D. Phosphoglucomutase"],
+        "answer": "A",
+        "explanation": "Classic galactosemia (Type I) is caused by GALT deficiency, leading to accumulation of toxic galactose-1-phosphate and galactitol."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 1-year-old child presents with musty-smelling urine, severe developmental delay, and hypopigmentation (pale skin, blue eyes). Ferric chloride test on urine yields a green color. What is the diagnosis?",
+        "options": ["A. Phenylketonuria (PKU)", "B. Alkaptonuria", "C. Maple Syrup Urine Disease", "D. Homocystinuria"],
+        "answer": "A",
+        "explanation": "PKU is caused by Phenylalanine Hydroxylase deficiency. Elevated phenylalanine converts to phenylpyruvate (green with ferric chloride) and causes hypopigmentation due to reduced tyrosine/melanin."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Inborn errors of branched-chain amino acid metabolism include all of the following EXCEPT:",
+        "options": ["A. Maple Syrup Urine Disease (MSUD)", "B. Isovaleric Acidemia", "C. Methylmalonic Acidemia", "D. Alkaptonuria"],
+        "answer": "D",
+        "explanation": "Alkaptonuria is an inborn error of aromatic amino acid (tyrosine/phenylalanine) degradation caused by homogentisate oxidase deficiency."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme deficiency causes dark pigmentation of sclera and cartilage (ochronosis) and urine that turns black upon standing?",
+        "options": ["A. Homogentisate oxidase", "B. Tyrosinase", "C. Phenylalanine hydroxylase", "D. Fumarylacetoacetate hydrolase"],
+        "answer": "A",
+        "explanation": "Homogentisate oxidase deficiency (Alkaptonuria) leads to accumulation of homogentisic acid, which oxidizes to dark polymers."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Pyridoxal Phosphate (PLP, Vitamin B6) is an essential coenzyme for all enzymatic transamination reactions.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "PLP acts as an intermediate amino-group carrier bound to aminotransferases during transamination."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 66-year-old malnourished man presents with macrocytic anemia and peripheral neuropathy. Blood tests show elevated levels of BOTH serum homocysteine AND methylmalonic acid (MMA). Which vitamin is deficient?",
+        "options": ["A. Vitamin B12 (Cobalamin)", "B. Vitamin B9 (Folate)", "C. Vitamin B6 (Pyridoxine)", "D. Vitamin B3 (Niacin)"],
+        "answer": "A",
+        "explanation": "Vitamin B12 is required by Methylmalonyl-CoA mutase; elevated MMA distinguishes B12 deficiency from pure Folate deficiency (where MMA is normal)."
+    },
+    {
+        "type": "Direct Question",
+        "question": "What is the primary neurotoxic mechanism of elevated blood ammonia (hyperammonemia) in the central nervous system?",
+        "options": ["A. Depletion of alpha-ketoglutarate and glutamate in astrocytes", "B. Inhibition of glycolysis", "C. Direct destruction of myelin sheaths", "D. Inhibition of GABA synthesis"],
+        "answer": "A",
+        "explanation": "Excess NH4+ drives glutamate dehydrogenase and glutamine synthetase reactions, depleting alpha-ketoglutarate and disrupting TCA cycle bioenergetics in the brain."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Lead poisoning inhibits heme biosynthesis by directly inactivating which two enzymes?",
+        "options": ["A. ALA dehydratase and Ferrochelatase", "B. ALA synthase and Uroporphyrinogen decarboxylase", "C. Porphobilinogen deaminase and Heme oxygenase", "D. Biliverdin reductase and Ferrochelatase"],
+        "answer": "A",
+        "explanation": "Lead binds sulfhydryl groups of ALA dehydratase and displaces iron in Ferrochelatase, causing anemia and protoporphyrin accumulation."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Acute Intermittent Porphyria (AIP) characteristically presents with severe abdominal pain and neuropsychiatric symptoms WITHOUT skin photosensitivity.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "AIP is caused by Hydroxymethylbilane synthase (PBG deaminase) deficiency; non-photosensitive porphyrin precursors (PBG, ALA) accumulate."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 3-year-old child presents with severe photosensitivity, blistering lesions on sun-exposed skin, red urine, and anemia. Diagnosis confirms Congenital Erythropoietic Porphyria (CEP). Which enzyme is deficient?",
+        "options": ["A. Uroporphyrinogen III cosynthase", "B. ALA synthase", "C. Ferrochelatase", "D. Biliverdin reductase"],
+        "answer": "A",
+        "explanation": "CEP (Gunther disease) results from Uroporphyrinogen III cosynthase deficiency, leading to accumulation of isomer I porphyrins which cause extreme photosensitivity."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme converts Arginine into Urea and Ornithine in the final step of the Urea Cycle?",
+        "options": ["A. Arginase", "B. Argininosuccinate lyase", "C. Carbamoyl phosphate synthetase I", "D. Ornithine transcarbamoylase"],
+        "answer": "A",
+        "explanation": "Arginase cleaves arginine to produce urea (disposed via kidneys) and regenerates ornithine (re-enters mitochondria)."
+    },
+    {
+        "type": "Exception Question",
+        "question": "In obstructive jaundice (biliary tree obstruction), typical diagnostic laboratory findings include all of the following EXCEPT:",
+        "options": ["A. Markedly elevated serum conjugated (direct) bilirubin", "B. Markedly elevated serum alkaline phosphatase (ALP)", "C. Pale, clay-colored (stercobilin-deficient) stools", "D. Markedly elevated urinary urobilinogen"],
+        "answer": "D",
+        "explanation": "Because bile flow into the duodenum is blocked, intestinal urobilinogen formation ceases; thus urinary urobilinogen is LOW or absent."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Cysteine becomes an essential amino acid in patients suffering from Homocystinuria.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Cystathionine beta-synthase deficiency blocks transsulfuration of methionine to cysteine, making cysteine conditionally essential."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A newborn exhibits severe lethargy, sweet maple syrup odor in the diaper, ketoacidosis, and seizures. Diagnosis confirms Maple Syrup Urine Disease. Which enzyme complex is defective?",
+        "options": ["A. Branched-Chain Alpha-Ketoacid Dehydrogenase (BCKD)", "B. Isovaleryl-CoA dehydrogenase", "C. Propionyl-CoA carboxylase", "D. Homogentisate oxidase"],
+        "answer": "A",
+        "explanation": "MSKD is caused by BCKD complex deficiency, preventing oxidative decarboxylation of leucine, isoleucine, and valine ketoacids."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which molecule acts as the obligate allosteric activator of Carbamoyl Phosphate Synthetase I (CPS-1) in the urea cycle?",
+        "options": ["A. N-Acetylglutamate (NAG)", "B. Citrulline", "C. Acetyl-CoA", "D. Fumarate"],
+        "answer": "A",
+        "explanation": "NAG is synthesized by NAG synthase (stimulated by arginine) and is strictly required to activate CPS-1."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Dietary management of classic Phenylketonuria (PKU) requires all of the following EXCEPT:",
+        "options": ["A. Strict limitation of dietary Phenylalanine", "B. Dietary supplementation of Tyrosine", "C. Complete, 100% elimination of all dietary Phenylalanine forever", "D. Early initiation in neonatal period to prevent irreversible intellectual disability"],
+        "answer": "C",
+        "explanation": "Phenylalanine is an essential amino acid; complete elimination causes protein starvation and death. It must be restricted to minimal growth requirements."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Unconjugated (indirect) bilirubin is lipid-soluble, bound to albumin in plasma, and cannot pass into urine.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Unconjugated bilirubin is nonpolar; it requires hepatic glucuronidation (via UDP-glucuronosyltransferase) to become water-soluble conjugated bilirubin."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An alcoholic patient presents with severe hypoglycemia. What is the metabolic mechanism by which excessive ethanol oxidation inhibits hepatic gluconeogenesis?",
+        "options": ["A. High NADH/NAD+ ratio forces pyruvate -> lactate and OAA -> malate", "B. Direct competitive inhibition of Pyruvate Carboxylase", "C. Depletion of ATP in hepatocytes", "D. Inhibition of glycogen phosphorylase"],
+        "answer": "A",
+        "explanation": "Alcohol and aldehyde dehydrogenases generate massive cytosolic NADH, consuming pyruvate and oxaloacetate and halting gluconeogenesis."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which enzyme converts Glucose to Sorbitol in the Polyol Pathway, contributing to diabetic microvascular complications (cataracts, neuropathy)?",
+        "options": ["A. Aldose reductase", "B. Sorbitol dehydrogenase", "C. Hexokinase", "D. Fructokinase"],
+        "answer": "A",
+        "explanation": "Aldose reductase reduces unphosphorylated glucose to sorbitol using NADPH. Sorbitol accumulation causes osmotic swelling."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following statements regarding the Ubiquitin-Proteasome System are TRUE EXCEPT:",
+        "options": ["A. It degrades misfolded and short-lived regulatory proteins", "B. Polyubiquitin tagging requires ATP", "C. Degradation occurs within the 26S proteasome core", "D. It operates exclusively inside lysosomes"],
+        "answer": "D",
+        "explanation": "The ubiquitin-proteasome system operates in the cytosol and nucleus at neutral pH. Lysosomal degradation is a separate autophagic pathway."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Steroidal anti-inflammatory drugs (e.g., Prednisolone) inhibit Phospholipase A2, blocking release of arachidonic acid from membrane phospholipids.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Glucocorticoids induce lipocortin (annexin A1), which inhibits Phospholipase A2 and prevents eicosanoid cascade initiation."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which cofactor is required by Propionyl-CoA Carboxylase during the catabolism of odd-chain fatty acids and branched-chain amino acids?",
+        "options": ["A. Biotin (Vitamin B7)", "B. Thiamine (Vitamin B1)", "C. Cobalamin (Vitamin B12)", "D. Pyridoxine (Vitamin B6)"],
+        "answer": "A",
+        "explanation": "Propionyl-CoA Carboxylase is a biotin-dependent enzyme that converts propionyl-CoA + CO2 + ATP into D-methylmalonyl-CoA."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient with severe hemolytic anemia exhibits dark urine and yellow sclera. Blood tests show elevated UNCONJUGATED bilirubin and elevated urine urobilinogen, with NO urinary bilirubin. What type of jaundice is present?",
+        "options": ["A. Hemolytic (Pre-hepatic) jaundice", "B. Obstructive (Post-hepatic) jaundice", "C. Hepatocellular jaundice", "D. Gilbert syndrome"],
+        "answer": "A",
+        "explanation": "Hemolysis overwhelms hepatic glucuronidation; unconjugated bilirubin increases in blood (bound to albumin, no urine bilirubin) and high urobilinogen is formed."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which amino acid is the primary carrier of amino groups from extrahepatic tissues (especially muscle) to the liver via blood?",
+        "options": ["A. Glutamine", "B. Alanine", "C. Aspartate", "D. Glycine"],
+        "answer": "A",
+        "explanation": "Glutamine synthetase converts glutamate + NH4+ into non-toxic glutamine for safe transport to liver and kidneys."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following enzymes are localized within the mitochondrial matrix EXCEPT:",
+        "options": ["A. Pyruvate Dehydrogenase", "B. Citrate Synthase", "C. Carbamoyl Phosphate Synthetase I", "D. Hexokinase"],
+        "answer": "D",
+        "explanation": "Hexokinase is a cytosolic enzyme (or bound to the outer mitochondrial membrane), participating in glycolytic phosphorylation."
+    }
+]
+
+
+
+with tab1:
+    st.header("🫀 Part 1: Anatomy & Histology")
+    render_question_list(q_tab1, "Anatomy & Histology", "tab1")
+
+with tab2:
+    st.header("⚡ Part 2: Physiology & Pathophysiology")
+    render_question_list(q_tab2, "Physiology", "tab2")
+
+with tab3:
+    st.header("🧪 Part 3: Biochemistry, Pharmacology & Clinical Scenarios")
+    render_question_list(q_tab3, "Biochemistry & Clinical", "tab3")
