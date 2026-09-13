@@ -6,7 +6,7 @@ from streamlit_gsheets import GSheetsConnection
 # ------------------------------------------------------------------------------
 # 1. INITIALIZE CONNECTIONS
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="🧪 MSPC 231 Interactive Quiz & Tracker", 
+st.set_page_config(page_title="🧪 MSPC 231 Interactive Quiz & Tracker") 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception:
