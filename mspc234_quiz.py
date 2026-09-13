@@ -1,571 +1,736 @@
 import streamlit as st
+import pandas as pd
+import datetime
+from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="MSPC234 Comprehensive Quiz (74 MCQs)", layout="wide", page_icon="🧠")
+# ------------------------------------------------------------------------------
+# 1. STREAMLIT CONFIG & GOOGLE SHEETS INITIALIZATION
+# ------------------------------------------------------------------------------
+st.set_page_config(page_title="MSPC234 Interactive Quiz & Tracker", layout="wide")
 
-st.title("🧠 MSPC234: Head & Neck Anatomy, Neuroanatomy & Neuropharmacology Quiz")
-st.caption("Compiled from Exam 2030, IA 2030, and Past Papers • Includes Case Scenarios, Direct MCQs, True/False & Exceptions")
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception:
+    conn = None
 
-if 'answers' not in st.session_state:
-    st.session_state.answers = {}
+# Initialize session state for user verification
+if "verified_user" not in st.session_state:
+    st.session_state.verified_user = None  # Dict: {"id": ..., "name": ...}
 
-tabs = st.tabs(["🫀 Gross Anatomy & Neuroanatomy (30 Qs)", "⚡ Neurophysiology & Special Senses (24 Qs)", "💊 Neuropharmacology & Neurochemistry (20 Qs)"])
 
-# QUESTION BANK: GROSS ANATOMY & NEUROANATOMY (30 Qs)
-q_anatomy = [
-    {
-        "id": "a1", "type": "Direct MCQs",
-        "q": "Which cranial nerve passes through the Foramen Ovale of the skull base?",
-        "options": ["A. Ophthalmic nerve (V1)", "B. Maxillary nerve (V2)", "C. Mandibular nerve (V3)", "D. Glossopharyngeal nerve (IX)"],
-        "answer": "C. Mandibular nerve (V3)",
-        "exp": "The Mandibular nerve (V3) exits the skull base through Foramen Ovale (Mnemonic: OVALE - Otic ganglion, V3, Accessory meningeal artery, Lesser petrosal nerve, Emissary vein)."
-    },
-    {
-        "id": "a2", "type": "Case Scenarios",
-        "q": "A 28-year-old man undergoes extraction of an impacted lower 3rd molar. Post-surgery, he has loss of general sensation over the anterior two-thirds of the tongue. Which nerve was injured?",
-        "options": ["A. Inferior alveolar nerve", "B. Lingual nerve", "C. Chorda tympani", "D. Glossopharyngeal nerve"],
-        "answer": "B. Lingual nerve",
-        "exp": "The lingual nerve lies directly medial to the periosteum of the alveolar socket of the mandibular third molar and carries somatic sensation from the anterior 2/3 of the tongue."
-    },
-    {
-        "id": "a3", "type": "Direct MCQs",
-        "q": "The giant pyramidal cells of Betz are located in which cortical layer of the primary motor cortex (Area 4)?",
-        "options": ["A. Layer III (External pyramidal)", "B. Layer IV (Internal granular)", "C. Layer V (Internal pyramidal)", "D. Layer VI (Multiform)"],
-        "answer": "C. Layer V (Internal pyramidal)",
-        "exp": "Betz cells are large upper motor neurons residing in Layer V of the primary motor cortex that give rise to corticospinal fibers."
-    },
-    {
-        "id": "a4", "type": "Exceptions",
-        "q": "Neural crest cells contribute to the development of all the following structures EXCEPT:",
-        "options": ["A. Melanocytes", "B. Odontoblasts", "C. Intrinsic muscles of the tongue", "D. Meninges (Pia and Arachnoid)"],
-        "answer": "C. Intrinsic muscles of the tongue",
-        "exp": "Intrinsic muscles of the tongue develop from occipital myotomes (somites), not neural crest."
-    },
-    {
-        "id": "a5", "type": "Direct MCQs",
-        "q": "The structure located in the floor of the inferior horn of the lateral ventricle is the:",
-        "options": ["A. Tail of caudate nucleus", "B. Stria terminalis", "C. Hippocampus", "D. Thalamus"],
-        "answer": "C. Hippocampus",
-        "exp": "The hippocampus forms the floor and medial wall of the inferior (temporal) horn of the lateral ventricle."
-    },
-    {
-        "id": "a6", "type": "Exceptions",
-        "q": "All of the following deep cerebellar nuclei are paired correctly from lateral to medial EXCEPT:",
-        "options": ["A. Dentate (most lateral)", "B. Emboliform", "C. Fastigial (most medial)", "D. Globose (most lateral)"],
-        "answer": "D. Globose (most lateral)",
-        "exp": "From lateral to medial, deep cerebellar nuclei are Dentate, Emboliform, Globose, Fastigial (Mnemonic: Don't Eat Greasy Foods)."
-    },
-    {
-        "id": "a7", "type": "Case Scenarios",
-        "q": "A 65-year-old woman presents with sudden right-sided face and arm weakness without lower limb involvement and without aphasia. Which artery is occluded?",
-        "options": ["A. Anterior cerebral artery", "B. Middle cerebral artery (superior division/branches)", "C. Posterior cerebral artery", "D. Anterior inferior cerebellar artery"],
-        "answer": "B. Middle cerebral artery (superior division/branches)",
-        "exp": "MCA supplies the lateral precentral gyrus (face and upper limb motor cortex). ACA supplies the medial surface (lower limb)."
-    },
-    {
-        "id": "a8", "type": "Direct MCQs",
-        "q": "Preganglionic parasympathetic fibers in the greater petrosal nerve synapse in which peripheral ganglion?",
-        "options": ["A. Otic ganglion", "B. Submandibular ganglion", "C. Pterygopalatine ganglion", "D. Ciliary ganglion"],
-        "answer": "C. Pterygopalatine ganglion",
-        "exp": "The greater petrosal nerve (branch of CN VII) carries preganglionic parasympathetic fibers to the pterygopalatine ganglion for lacrimal and nasal mucosal secretion."
-    },
-    {
-        "id": "a9", "type": "Direct MCQs",
-        "q": "Superficial temporal artery pulse can be palpated anterior to the tragus of the ear over which bone?",
-        "options": ["A. Maxilla", "B. Zygomatic arch / Temporal bone", "C. Mandibular angle", "D. Parietal bone"],
-        "answer": "B. Zygomatic arch / Temporal bone",
-        "exp": "The superficial temporal artery pulse is easily felt as it crosses the root of the zygomatic arch anterior to the auricle."
-    },
-    {
-        "id": "a10", "type": "Direct MCQs",
-        "q": "In an adult, the spinal cord conus medullaris typically terminates at vertebral level:",
-        "options": ["A. T10-T11", "B. L1-L2", "C. L3-L4", "D. S1-S2"],
-        "answer": "B. L1-L2",
-        "exp": "The adult spinal cord ends at L1-L2 vertebra; in newborns it terminates at L3."
-    },
-    {
-        "id": "a11", "type": "Case Scenarios",
-        "q": "A patient with an abducent nerve (CN VI) palsy and ipsilateral facial weakness has a brainstem lesion at the level of the facial colliculus in the:",
-        "options": ["A. Midbrain tegmentum", "B. Dorsal pons", "C. Open medulla", "D. Subthalamus"],
-        "answer": "B. Dorsal pons",
-        "exp": "The facial colliculus in the floor of the 4th ventricle in the dorsal pons is formed by facial nerve motor fibers looping over the abducent nucleus."
-    },
-    {
-        "id": "a12", "type": "Direct MCQs",
-        "q": "Cerebrospinal fluid drains from the subarachnoid space into dural venous sinuses via:",
-        "options": ["A. Choroid plexus capillaries", "B. Arachnoid granulations (villi)", "C. Virchow-Robin spaces", "D. Foramina of Luschka"],
-        "answer": "B. Arachnoid granulations (villi)",
-        "exp": "Arachnoid granulations project into the superior sagittal sinus and act as one-way valves for CSF reabsorption."
-    },
-    {
-        "id": "a13", "type": "Direct MCQs",
-        "q": "Which dural fold separates the cerebellar hemispheres from the overlying occipital lobes?",
-        "options": ["A. Falx cerebri", "B. Tentorium cerebelli", "C. Falx cerebelli", "D. Diaphragma sellae"],
-        "answer": "B. Tentorium cerebelli", "exp": "Tentorium cerebelli roofs the posterior cranial fossa."
-    },
-    {
-        "id": "a14", "type": "Case Scenarios",
-        "q": "A patient presents with bitemporal hemianopia ('tunnel vision'). Where is the lesion located?",
-        "options": ["A. Left optic nerve", "B. Right optic tract", "C. Optic chiasm", "D. Geniculocalcarine tract"],
-        "answer": "C. Optic chiasm",
-        "exp": "A pituitary tumor compressing the center of the optic chiasm interrupts decussating nasal retinal fibers, causing loss of peripheral (temporal) vision in both eyes."
-    },
-    {
-        "id": "a15", "type": "Direct MCQs",
-        "q": "The medial lemniscus is formed by decussating second-order sensory axons originating from the:",
-        "options": ["A. Substantia gelatinosa", "B. Nucleus gracilis and Nucleus cuneatus", "C. Ventral posterolateral thalamic nucleus", "D. Clarke's column"],
-        "answer": "B. Nucleus gracilis and Nucleus cuneatus",
-        "exp": "Second-order sensory neurons in gracile/cuneate nuclei cross in the lower medulla as internal arcuate fibers to form the medial lemniscus."
-    },
-    {
-        "id": "a16", "type": "Exceptions",
-        "q": "All of the following cranial nerve nuclei are located in the medulla oblongata EXCEPT:",
-        "options": ["A. Hypoglossal nucleus (XII)", "B. Nucleus ambiguus (IX, X, XI)", "C. Solitary nucleus (VII, IX, X)", "D. Abducent nucleus (VI)"],
-        "answer": "D. Abducent nucleus (VI)",
-        "exp": "The abducent nucleus resides in the caudal pons."
-    },
-    {
-        "id": "a17", "type": "Case Scenarios",
-        "q": "An arterial occlusion of the posterior inferior cerebellar artery (PICA) produces Wallenberg lateral medullary syndrome. Which tract damage causes loss of pain and temperature on the contralateral body?",
-        "options": ["A. Corticospinal tract", "B. Lateral spinothalamic tract", "C. Medial lemniscus", "D. Fasciculus gracilis"],
-        "answer": "B. Lateral spinothalamic tract",
-        "exp": "PICA supplies the anterolateral medulla; damaging the lateral spinothalamic tract causes contralateral body analgesia."
-    },
-    {
-        "id": "a18", "type": "Exceptions",
-        "q": "Features of Upper Motor Neuron (UMN) lesions include all of the following EXCEPT:",
-        "options": ["A. Spastic paralysis", "B. Hyperreflexia and clonus", "C. Extensor plantar response (Babinski sign)", "D. Severe neurogenic muscle denervation atrophy"],
-        "answer": "D. Severe neurogenic muscle denervation atrophy",
-        "exp": "Severe neurogenic atrophy occurs in Lower Motor Neuron (LMN) lesions; UMN lesions cause mild disuse atrophy."
-    },
-    {
-        "id": "a19", "type": "Direct MCQs",
-        "q": "Broca's motor speech area corresponds to Brodmann areas 44 and 45 in the:",
-        "options": ["A. Superior temporal gyrus", "B. Inferior frontal gyrus", "C. Postcentral gyrus", "D. Cingulate gyrus"],
-        "answer": "B. Inferior frontal gyrus",
-        "exp": "Broca's area resides in the pars opercularis and pars triangularis of the dominant inferior frontal gyrus."
-    },
-    {
-        "id": "a20", "type": "Direct MCQs",
-        "q": "Wernicke's receptive language area is located in the posterior part of the:",
-        "options": ["A. Inferior frontal gyrus", "B. Superior temporal gyrus", "C. Precentral gyrus", "D. Angular gyrus"],
-        "answer": "B. Superior temporal gyrus",
-        "exp": "Wernicke's area (Brodmann 22) resides in the posterior superior temporal gyrus."
-    },
-    {
-        "id": "a21", "type": "Case Scenarios",
-        "q": "A newborn baby is born with a cystic sac on the lower back containing meninges and spinal cord elements covered by thin skin. What is the diagnosis?",
-        "options": ["A. Anencephaly", "B. Myelomeningocele (Spina bifida cystica)", "C. Encephalocele", "D. Spina bifida occulta"],
-        "answer": "B. Myelomeningocele (Spina bifida cystica)",
-        "exp": "Failure of neural tube closure at the caudal neuropore leads to spina bifida cystica with herniation of cord and meninges."
-    },
-    {
-        "id": "a22", "type": "Direct MCQs",
-        "q": "What total volume of cerebrospinal fluid (CSF) is contained within the adult ventricles and subarachnoid space?",
-        "options": ["A. 50 mL", "B. 150 mL", "C. 500 mL", "D. 1000 mL"],
-        "answer": "B. 150 mL",
-        "exp": "Total adult CSF volume is ~150 mL, produced at ~500 mL/day and turned over 3-4 times daily."
-    },
-    {
-        "id": "a23", "type": "Exceptions",
-        "q": "Which structure passes through the internal acoustic meatus alongside Cranial Nerve VIII?",
-        "options": ["A. Facial nerve (CN VII)", "B. Glossopharyngeal nerve (CN IX)", "C. Labyrinthine artery", "D. Vestibulocochlear nerve (CN VIII)"],
-        "answer": "B. Glossopharyngeal nerve (CN IX)",
-        "exp": "The internal acoustic meatus transmits CN VII, CN VIII, and the labyrinthine artery. CN IX exits via the jugular foramen."
-    },
-    {
-        "id": "a24", "type": "Direct MCQs",
-        "q": "The optic radiation fibers carrying visual signals from the lateral geniculate nucleus to the primary visual cortex pass through which part of the internal capsule?",
-        "options": ["A. Anterior limb", "B. Genu", "C. Retrolenticular part", "D. Anterior 2/3 of posterior limb"],
-        "answer": "C. Retrolenticular part",
-        "exp": "Optic radiation fibers travel in the retrolenticular and sublenticular parts of the posterior limb of the internal capsule."
-    },
-    {
-        "id": "a25", "type": "Direct MCQs",
-        "q": "Which brain vesicle gives rise to the adult cerebral hemispheres and lateral ventricles?",
-        "options": ["A. Telencephalon", "B. Diencephalon", "C. Metencephalon", "D. Myelencephalon"],
-        "answer": "A. Telencephalon",
-        "exp": "Forebrain (prosencephalon) divides into telencephalon (cerebral cortex, striatum) and diencephalon (thalamus, hypothalamus)."
-    },
-    {
-        "id": "a26", "type": "Exceptions",
-        "q": "All of the following are components of the basal ganglia EXCEPT:",
-        "options": ["A. Caudate nucleus", "B. Putamen", "C. Globus pallidus", "D. Dentate nucleus"],
-        "answer": "D. Dentate nucleus",
-        "exp": "The dentate nucleus is a deep cerebellar nucleus."
-    },
-    {
-        "id": "a27", "type": "Case Scenarios",
-        "q": "A 50-year-old man presents with resting tremor ('pill-rolling'), muscle rigidity ('lead-pipe'), and bradykinesia. What pathway is degenerated?",
-        "options": ["A. Corticospinal tract", "B. Nigrostriatal dopaminergic pathway", "C. Cerebellothalamic tract", "D. Spinothalamic tract"],
-        "answer": "B. Nigrostriatal dopaminergic pathway",
-        "exp": "Parkinson's disease is caused by loss of dopaminergic neurons in the substantia nigra pars compacta projecting to the striatum."
-    },
-    {
-        "id": "a28", "type": "Direct MCQs",
-        "q": "Primary visual cortex (Brodmann area 17) surrounds which cortical sulcus on the medial surface of the occipital lobe?",
-        "options": ["A. Central sulcus", "B. Calcarine sulcus", "C. Lateral sulcus", "D. Parieto-occipital sulcus"],
-        "answer": "B. Calcarine sulcus",
-        "exp": "Area 17 (striate cortex) lines the upper and lower banks of the calcarine sulcus."
-    },
-    {
-        "id": "a29", "type": "Direct MCQs",
-        "q": "The primary sensory nucleus of the thalamus receiving medial lemniscal and spinothalamic inputs from the body is the:",
-        "options": ["A. Ventral posteromedial (VPM) nucleus", "B. Ventral posterolateral (VPL) nucleus", "C. Mediodorsal nucleus", "D. Lateral geniculate nucleus"],
-        "answer": "B. Ventral posterolateral (VPL) nucleus",
-        "exp": "VPL receives somatosensory signals from the body (VPM receives facial sensations from CN V)."
-    },
-    {
-        "id": "a30", "type": "Direct MCQs",
-        "q": "Histologically, myelin sheaths surrounding axons in the central nervous system (CNS) are formed by:",
-        "options": ["A. Schwann cells", "B. Oligodendrocytes", "C. Astrocytes", "D. Microglia"],
-        "answer": "B. Oligodendrocytes",
-        "exp": "Oligodendrocytes myelinate multiple CNS axons; Schwann cells myelinate single PNS axons."
-    }
-]
+# ------------------------------------------------------------------------------
+# 2. ROSTER VERIFICATION FUNCTION (HANDLES NUMBERS & LETTERS)
+# ------------------------------------------------------------------------------
+def verify_student(input_identifier):
+    search_query = str(input_identifier).strip().lower()
+    if search_query.endswith(".0"):
+        search_query = search_query[:-2]
 
-# QUESTION BANK: NEUROPHYSIOLOGY & SPECIAL SENSES (24 Qs)
-q_physio = [
-    {
-        "id": "p1", "type": "Direct MCQs",
-        "q": "The resting membrane potential of a neuron (-70 mV) is closest to the equilibrium potential for which ion?",
-        "options": ["A. Sodium (+60 mV)", "B. Potassium (-90 mV)", "C. Calcium (+120 mV)", "D. Chloride (-70 mV)"],
-        "answer": "B. Potassium (-90 mV)",
-        "exp": "Neuronal membranes at rest have high leak permeability for K+, bringing resting potential near the Nernst equilibrium potential for K+."
-    },
-    {
-        "id": "p2", "type": "Direct MCQs",
-        "q": "Which ion flux is primarily responsible for the rapid repolarization phase of an action potential?",
-        "options": ["A. Influx of Na+", "B. Efflux of K+", "C. Influx of Ca2+", "D. Efflux of Cl-"],
-        "answer": "B. Efflux of K+", "exp": "Inactivation of voltage-gated Na+ channels and opening of voltage-gated K+ channels drives outward K+ efflux, repolarizing the membrane."
-    },
-    {
-        "id": "p3", "type": "Direct MCQs",
-        "q": "Which inorganic ion acts as an endogenous voltage-dependent blocker of NMDA receptors at resting membrane potentials?",
-        "options": ["A. Sodium", "B. Potassium", "C. Magnesium (Mg2+)", "D. Zinc"],
-        "answer": "C. Magnesium (Mg2+)",
-        "exp": "Extracellular Mg2+ plugs NMDA receptor channels at resting potential; membrane depolarization expels Mg2+, permitting Ca2+ influx."
-    },
-    {
-        "id": "p4", "type": "Case Scenarios",
-        "q": "Light striking retinal rod photoreceptors causes which intracellular physiological response?",
-        "options": ["A. Activation of guanylyl cyclase and depolarization", "B. Activation of phosphodiesterase, decrease in cGMP, and hyperpolarization", "C. Influx of Na+ and action potential firing", "D. Release of glutamate"],
-        "answer": "B. Activation of phosphodiesterase, decrease in cGMP, and hyperpolarization",
-        "exp": "Rhodopsin absorption activates transducin, stimulating cGMP phosphodiesterase. Dropping cGMP closes CNG cation channels, hyperpolarizing rod cells."
-    },
-    {
-        "id": "p5", "type": "Direct MCQs",
-        "q": "The length constant (lambda) of an axon increases with:",
-        "options": ["A. Increased internal axoplasmic resistance", "B. Increased membrane resistance (myelination) and increased axon diameter", "C. Demyelination", "D. Reduced membrane resistance"],
-        "answer": "B. Increased membrane resistance (myelination) and increased axon diameter",
-        "exp": "Lambda = sqrt(rm/ri). Myelination increases membrane resistance (rm) and larger diameter reduces internal resistance (ri), increasing signal conduction distance."
-    },
-    {
-        "id": "p6", "type": "Direct MCQs",
-        "q": "The afferent sensory limb of the corneal blink reflex is mediated by which nerve?",
-        "options": ["A. Optic nerve (CN II)", "B. Ophthalmic nerve (CN V1)", "C. Facial nerve (CN VII)", "D. Oculomotor nerve (CN III)"],
-        "answer": "B. Ophthalmic nerve (CN V1)",
-        "exp": "CN V1 nasociliary branch provides sensory innervation to the cornea (afferent limb); CN VII motor branch closes orbicularis oculi (efferent limb)."
-    },
-    {
-        "id": "p7", "type": "Direct MCQs",
-        "q": "The Inverse Stretch Reflex is initiated by activation of which sensory receptor?",
-        "options": ["A. Muscle spindle intrafusal fibers", "B. Golgi tendon organ (IB afferents)", "C. Pacinian corpuscle", "D. Free nerve endings"],
-        "answer": "B. Golgi tendon organ (IB afferents)",
-        "exp": "Golgi tendon organs sense muscle contraction tension and send IB sensory signals that inhibit alpha motor neurons, relaxing the muscle to prevent tendon tearing."
-    },
-    {
-        "id": "p8", "type": "Exceptions",
-        "q": "Which sensory modality is relayed directly to the cerebral cortex WITHOUT synapsing in the thalamus?",
-        "options": ["A. Gustation (Taste)", "B. Vision", "C. Olfaction (Smell)", "D. Audition (Hearing)"],
-        "answer": "C. Olfaction (Smell)",
-        "exp": "Olfactory bulb tracts project directly to the primary olfactory cortex (pyriform cortex) without prior thalamic relay."
-    },
-    {
-        "id": "p9", "type": "Direct MCQs",
-        "q": "Sensory TRPV1 ion channels are activated by noxious heat (>43°C) and which chemical compound?",
-        "options": ["A. Menthol", "B. Capsaicin", "C. Mustard oil", "D. Cold temperatures"],
-        "answer": "B. Capsaicin",
-        "exp": "TRPV1 (transient receptor potential vanilloid 1) non-selective cation channels are opened by capsaicin (chili peppers), heat, and protons."
-    },
-    {
-        "id": "p10", "type": "Case Scenarios",
-        "q": "A Weber tuning fork test lateralizes to the abnormal right ear, and Rinne test shows bone conduction > air conduction in the right ear. What type of hearing loss is present?",
-        "options": ["A. Right sensorineural hearing loss", "B. Right conductive hearing loss", "C. Left conductive hearing loss", "D. Normal hearing"],
-        "answer": "B. Right conductive hearing loss",
-        "exp": "Conductive hearing loss blocks ambient environmental noise, causing Weber to lateralize to the affected ear and Rinne to show BC > AC (negative Rinne)."
-    },
-    {
-        "id": "p11", "type": "Direct MCQs",
-        "q": "Depolarization of inner ear hair cells in the Organ of Corti is driven by influx of which ion from the endolymph?",
-        "options": ["A. Na+", "B. K+", "C. Ca2+", "D. Cl-"],
-        "answer": "B. K+",
-        "exp": "Endolymph in the scala media has a high K+ concentration (+80 mV potential). Opening apical mechanosensitive channels drives K+ influx into hair cells."
-    },
-    {
-        "id": "p12", "type": "Direct MCQs",
-        "q": "Fast, sharp, pricking pain sensation is transmitted to the spinal cord via which type of nerve fibers?",
-        "options": ["A. Unmyelinated C fibers", "B. Small myelinated A-delta fibers", "C. Large myelinated A-alpha fibers", "D. A-beta fibers"],
-        "answer": "B. Small myelinated A-delta fibers",
-        "exp": "A-delta fibers carry fast, localized nociception; unmyelinated C fibers transmit slow, burning, dull pain."
-    },
-    {
-        "id": "p13", "type": "Direct MCQs",
-        "q": "Which protein component of the presynaptic SNARE complex is cleaved by Botulinum toxin A to block acetylcholine release?",
-        "options": ["A. Synaptotagmin", "B. SNAP-25", "C. Syntaxin", "D. Synaptobrevin (VAMP)"],
-        "answer": "B. SNAP-25",
-        "exp": "Botulinum toxin A light chain cleaves SNAP-25, preventing presynaptic vesicle fusion and causing flaccid paralysis."
-    },
-    {
-        "id": "p14", "type": "Exceptions",
-        "q": "Features of electrotonic local potentials include all of the following EXCEPT:",
-        "options": ["A. Graded amplitude proportional to stimulus strength", "B. Decremental spread with distance", "C. Non-refractory summation", "D. All-or-none regenerative propagation"],
-        "answer": "D. All-or-none regenerative propagation",
-        "exp": "All-or-none propagation is a feature of action potentials, whereas graded electrotonic potentials decay passively over distance."
-    },
-    {
-        "id": "p15", "type": "Direct MCQs",
-        "q": "In muscle spindles, gamma motor neurons innervate which contractile structures?",
-        "options": ["A. Extrafusal muscle fibers", "B. Intrafusal muscle fiber contractile ends", "C. Golgi tendon organs", "D. Joint capsules"],
-        "answer": "B. Intrafusal muscle fiber contractile ends",
-        "exp": "Gamma motor neurons adjust spindle sensitivity by contracting the intrafusal fiber ends, maintaining spindle tension during voluntary muscle contraction."
-    },
-    {
-        "id": "p16", "type": "True or False",
-        "q": "Select the TRUE statement regarding the Blood-Brain Barrier (BBB):",
-        "options": ["A. Endothelial cells of the BBB lack tight junctions", "B. Astrocytic end-feet and endothelial tight junctions (claudins/occludins) form a selective diffusion barrier", "C. Glucose crosses the BBB via simple passive lipid diffusion", "D. Area postrema possesses a highly impermeable BBB"],
-        "answer": "B. Astrocytic end-feet and endothelial tight junctions (claudins/occludins) form a selective diffusion barrier",
-        "exp": "BBB capillary endothelia have continuous tight junctions and astrocytic end-feet. Glucose requires GLUT-1 facilitated transport; area postrema lacks BBB."
-    },
-    {
-        "id": "p17", "type": "Direct MCQs",
-        "q": "Lateral inhibition in sensory nervous systems serves primarily to:",
-        "options": ["A. Decrease receptor sensitivity", "B. Enhance spatial acuity and border contrast", "C. Prolong adaptation rate", "D. Inhibit motor neuron firing"],
-        "answer": "B. Enhance spatial acuity and border contrast",
-        "exp": "Inhibitory interneurons suppress signals from neighboring receptive fields, sharpening sensory perception contrast."
-    },
-    {
-        "id": "p18", "type": "Case Scenarios",
-        "q": "A patient exhibits muscle weakness that improves significantly following administration of Edrophonium (Tensilon test). What receptor is targeted by autoantibodies in this disease?",
-        "options": ["A. Muscarinic M3 receptors", "B. Nicotinic acetylcholine receptors (Nm) at neuromuscular junctions", "C. D2 dopamine receptors", "D. Voltage-gated calcium channels"],
-        "answer": "B. Nicotinic acetylcholine receptors (Nm) at neuromuscular junctions",
-        "exp": "Myasthenia gravis involves autoantibodies against postsynaptic Nm receptors; acetylcholinesterase inhibitors like edrophonium temporarily boost ACh levels to improve strength."
-    },
-    {
-        "id": "p19", "type": "Direct MCQs",
-        "q": "Which major second messenger system is activated by Gs protein-coupled receptors?",
-        "options": ["A. Phospholipase C -> IP3 / DAG", "B. Adenylyl cyclase -> cyclic AMP (cPMP)", "C. cGMP phosphodiesterase", "D. Tyrosine kinase"],
-        "answer": "B. Adenylyl cyclase -> cyclic AMP (cPMP)",
-        "exp": "Gs alpha subunit activates adenylyl cyclase, converting ATP to cAMP and activating Protein Kinase A."
-    },
-    {
-        "id": "p20", "type": "Exceptions",
-        "q": "All of the following taste modalities utilize G-protein coupled receptors (GPCRs) EXCEPT:",
-        "options": ["A. Sweet", "B. Umami", "C. Bitter", "D. Salty"],
-        "answer": "D. Salty",
-        "exp": "Salty (ENaC channels) and Sour (H+ channels) use direct ion channels, whereas Sweet, Umami, and Bitter use GPCRs (T1R / T2R families)."
-    },
-    {
-        "id": "p21", "type": "Direct MCQs",
-        "q": "Long-Term Potentiation (LTP) in hippocampal synapses requires Ca2+ influx through which receptor type?",
-        "options": ["A. AMPA receptors", "B. NMDA receptors", "C. Kainate receptors", "D. GABA-A receptors"],
-        "answer": "B. NMDA receptors",
-        "exp": "Postsynaptic depolarization removes Mg2+ block from NMDA receptors, allowing Ca2+ influx that triggers LTP synaptic plasticity."
-    },
-    {
-        "id": "p22", "type": "Direct MCQs",
-        "q": "The primary inhibitory neurotransmitter in the spinal cord and brainstem is:",
-        "options": ["A. Glutamate", "B. Glycine", "C. Acetylcholine", "D. Substance P"],
-        "answer": "B. Glycine",
-        "exp": "Glycine opens strychnine-sensitive Cl- channels in spinal interneurons, producing IPSPs. GABA is the main inhibitory transmitter in the brain."
-    },
-    {
-        "id": "p23", "type": "Direct MCQs",
-        "q": "Dantrolene relaxes skeletal muscle by blocking which sarcoplasmic reticulum membrane channel?",
-        "options": ["A. Dihydropyridine (DHP) receptors", "B. Ryanodine receptors (RyR1)", "C. SERCA pumps", "D. Na+/K+ ATPase"],
-        "answer": "B. Ryanodine receptors (RyR1)",
-        "exp": "Dantrolene inhibits RyR1 Ca2+ release channels in skeletal muscle SR, treating malignant hyperthermia."
-    },
-    {
-        "id": "p24", "type": "Case Scenarios",
-        "q": "Electromyography (EMG) showing high-amplitude long-duration motor unit action potentials with reduced recruitment during voluntary contraction indicates:",
-        "options": ["A. Myopathy", "B. Neuropathy / Denervation with reinnervation", "C. Normal muscle", "D. Neuromuscular junction transmission defect"],
-        "answer": "B. Neuropathy / Denervation with reinnervation",
-        "exp": "Denervation followed by collateral sprouting increases motor unit territory, producing giant high-amplitude EMG potentials."
-    }
-]
+    if not search_query or conn is None:
+        return None
 
-# QUESTION BANK: NEUROPHARMACOLOGY & NEUROCHEMISTRY (20 Qs)
-q_pharm = [
-    {
-        "id": "rx1", "type": "Direct MCQs",
-        "q": "Formoterol is classified pharmacologically as a selective:",
-        "options": ["A. Alpha-1 adrenergic agonist", "B. Alpha-2 adrenergic agonist", "C. Beta-1 adrenergic agonist", "D. Long-acting Beta-2 adrenergic agonist (LABA)"],
-        "answer": "D. Long-acting Beta-2 adrenergic agonist (LABA)",
-        "exp": "Formoterol is a LABA used for bronchodilation in asthma and COPD management."
-    },
-    {
-        "id": "rx2", "type": "Direct MCQs",
-        "q": "Which centrally-acting alpha-2 adrenergic agonist is used as a first-line antihypertensive in pregnancy?",
-        "options": ["A. Clonidine", "B. Methyldopa", "C. Phenylephrine", "D. Propranolol"],
-        "answer": "B. Methyldopa",
-        "exp": "Methyldopa is metabolized to alpha-methylnorepinephrine in the CNS, stimulating alpha-2 receptors to decrease sympathetic outflow safely in pregnancy."
-    },
-    {
-        "id": "rx3", "type": "Case Scenarios",
-        "q": "A patient receiving general anesthesia for surgery develops severe adrenal steroidogenesis inhibition (inhibition of 11-beta-hydroxylase). Which agent was administered?",
-        "options": ["A. Propofol", "B. Ketamine", "C. Etomidate", "D. Sevoflurane"],
-        "answer": "C. Etomidate",
-        "exp": "Etomidate inhibits 11-beta-hydroxylase, suppressing cortisol and aldosterone synthesis."
-    },
-    {
-        "id": "rx4", "type": "Direct MCQs",
-        "q": "Ketamine acts as a dissociative general anesthetic primarily by antagonizing which receptor?",
-        "options": ["A. GABA-A receptors", "B. NMDA receptors", "C. Mu opioid receptors", "D. Muscarinic receptors"],
-        "answer": "B. NMDA receptors",
-        "exp": "Ketamine is a non-competitive antagonist of NMDA glutamate receptors, producing analgesia, amnesia, and catatonia (dissociative anesthesia)."
-    },
-    {
-        "id": "rx5", "type": "Exceptions",
-        "q": "Barbiturates exert all of the following pharmacological effects EXCEPT:",
-        "options": ["A. Prolong GABA-A channel opening duration", "B. Cause central respiratory depression", "C. Induce hepatic cytochrome P450 enzymes", "D. Exert cardio-stimulatory positive inotropic effects"],
-        "answer": "D. Exert cardio-stimulatory positive inotropic effects",
-        "exp": "Barbiturates depress cardiovascular and respiratory centers, causing vasodilation and hypotension."
-    },
-    {
-        "id": "rx6", "type": "Direct MCQs",
-        "q": "Which intravenous general anesthetic exhibits intrinsic antiemetic properties, making post-operative nausea and vomiting unlikely?",
-        "options": ["A. Ketamine", "B. Propofol", "C. Nitrous oxide", "D. Etomidate"],
-        "answer": "B. Propofol",
-        "exp": "Propofol possesses antiemetic effects at sub-anesthetic doses."
-    },
-    {
-        "id": "rx7", "type": "Case Scenarios",
-        "q": "Cocaine increases synaptic dopamine concentration and produces euphoria by inhibiting which presynaptic membrane transport protein?",
-        "options": ["A. Vesicular monoamine transporter (VMAT)", "B. Dopamine active transporter (DAT)", "C. Monoamine oxidase (MAO)", "D. Choline acetyltransferase"],
-        "answer": "B. Dopamine active transporter (DAT)",
-        "exp": "Cocaine blocks DAT reuptake, prolonging synaptic dopamine accumulation in the nucleus accumbens reward pathway."
-    },
-    {
-        "id": "rx8", "type": "Direct MCQs",
-        "q": "Inhibition of acetylcholinesterase by Pyridostigmine leads to:",
-        "options": ["A. Rapid breakdown of synaptic ACh", "B. Accumulation of ACh in the neuromuscular synaptic cleft", "C. Blockade of muscarinic receptors", "D. Inhibition of choline uptake"],
-        "answer": "B. Accumulation of ACh in the neuromuscular synaptic cleft",
-        "exp": "AChE inhibitors prevent ACh hydrolysis, boosting synaptic ACh concentration to overcome receptor block in myasthenia gravis."
-    },
-    {
-        "id": "rx9", "type": "Exceptions",
-        "q": "Side effects of atropine (muscarinic receptor antagonist) include all of the following EXCEPT:",
-        "options": ["A. Mydriasis (pupillary dilation)", "B. Miosis (pupillary constriction)", "C. Anhidrosis (dry skin/fever)", "D. Urinary retention"],
-        "answer": "B. Miosis (pupillary constriction)",
-        "exp": "Atropine blocks M3 receptors on the sphincter pupillae, causing mydriasis and cycloplegia. Miosis is caused by cholinomimetics."
-    },
-    {
-        "id": "rx10", "type": "Direct MCQs",
-        "q": "Which direct-acting muscarinic agonist is used to treat non-obstructive post-operative urinary retention?",
-        "options": ["A. Bethanechol", "B. Pilocarpine", "C. Atropine", "D. Scopolamine"],
-        "answer": "A. Bethanechol",
-        "exp": "Bethanechol selectively activates GI/bladder smooth muscle M3 receptors, stimulating detrusor contraction to treat urinary retention."
-    },
-    {
-        "id": "rx11", "type": "Case Scenarios",
-        "q": "A patient with organophosphate insecticide poisoning presents with salivation, lacrimation, urination, defecation, and muscle fasciculations. Which drug reactivates acetylcholinesterase?",
-        "options": ["A. Atropine", "B. Pralidoxime (2-PAM)", "C. Physostigmine", "D. Neostigmine"],
-        "answer": "B. Pralidoxime (2-PAM)",
-        "exp": "Pralidoxime regenerates phosphorylated acetylcholinesterase if given before 'aging' occurs. Atropine blocks muscarinic signs but does not reactivate AChE."
-    },
-    {
-        "id": "rx12", "type": "Direct MCQs",
-        "q": "Which volatile inhaled anesthetic acts partly via two-pore domain potassium channels (TREK/TASK)?",
-        "options": ["A. Isoflurane", "B. Ketamine", "C. Propofol", "D. Etomidate"],
-        "answer": "A. Isoflurane",
-        "exp": "Inhaled halogenated anesthetics (isoflurane, sevoflurane) activate background 2-pore K+ channels, hyperpolarizing CNS neurons."
-    },
-    {
-        "id": "rx13", "type": "Case Scenarios",
-        "q": "Glaucoma treatment with Pilocarpine lowers intraocular pressure by opening the trabecular meshwork via contraction of which muscle?",
-        "options": ["A. Dilator pupillae muscle", "B. Ciliary muscle", "C. Superior rectus muscle", "D. Levator palpebrae"],
-        "answer": "B. Ciliary muscle",
-        "exp": "Pilocarpine contracts the M3-mediated ciliary muscle and sphincter pupillae, pulling the scleral spur to open trabecular meshwork drainage of aqueous humor."
-    },
-    {
-        "id": "rx14", "type": "Direct MCQs",
-        "q": "Administration of a Monoamine Oxidase B (MAO-B) inhibitor like Selegiline in Parkinson's disease results in:",
-        "options": ["A. Decreased synaptic dopamine levels", "B. Reduced dopamine breakdown in the striatum", "C. Increased degradation of levodopa", "D. Blockade of D2 receptors"],
-        "answer": "B. Reduced dopamine breakdown in the striatum",
-        "exp": "MAO-B selectively metabolizes dopamine in the brain; inhibiting MAO-B prolongs striatal dopamine survival."
-    },
-    {
-        "id": "rx15", "type": "Exceptions",
-        "q": "Local anesthetics are less effective in infected tissues because of:",
-        "options": ["A. Decreased extracellular pH causing ion trapping in the ionized protonated form", "B. Increased tissue vascularity clearing the drug", "C. Direct enzymatic inactivation by bacterial enzymes", "D. Hyperpolarization of nerve membranes"],
-        "answer": "A. Decreased extracellular pH causing ion trapping in the ionized protonated form",
-        "exp": "Infected tissue is acidic (low pH), converting weak base local anesthetics into their ionized BH+ form, which cannot penetrate lipophilic nerve sheaths."
-    },
-    {
-        "id": "rx16", "type": "Direct MCQs",
-        "q": "Co-administration of epinephrine with local anesthetics (e.g. Lidocaine) serves to:",
-        "options": ["A. Cause local vasoconstriction via alpha-1 receptors, decreasing systemic absorption and prolonging anesthesia", "B. Increase systemic absorption rate", "C. Neutralize local tissue acid", "D. Directly block voltage-gated Na+ channels"],
-        "answer": "A. Cause local vasoconstriction via alpha-1 receptors, decreasing systemic absorption and prolonging anesthesia",
-        "exp": "Epinephrine vasoconstricts local arterioles, keeping the anesthetic localized, enhancing blockade, and reducing toxicity."
-    },
-    {
-        "id": "rx17", "type": "Direct MCQs",
-        "q": "Which atypical antipsychotic acts as a partial agonist at D2 and 5-HT1A receptors and antagonist at 5-HT2A receptors?",
-        "options": ["A. Haloperidol", "B. Clozapine", "C. Aripiprazole", "D. Chlorpromazine"],
-        "answer": "C. Aripiprazole",
-        "exp": "Aripiprazole is a 'dopamine system stabilizer' acting as a D2 partial agonist."
-    },
-    {
-        "id": "rx18", "type": "Case Scenarios",
-        "q": "A transdermal patch of Scopolamine applied behind the ear prevents motion sickness primarily by antagonizing muscarinic receptors in the:",
-        "options": ["A. Gastrointestinal tract", "B. Vestibular nuclei and vomiting center (area postrema)", "C. Cerebral cortex", "D. Carotid sinus"],
-        "answer": "B. Vestibular nuclei and vomiting center (area postrema)",
-        "exp": "Scopolamine blocks M1 muscarinic receptors in the vestibular apparatus and nucleus tractus solitarius, suppressing motion-induced nausea."
-    },
-    {
-        "id": "rx19", "type": "Direct MCQs",
-        "q": "Benzodiazepines (e.g., Diazepam) enhance GABAergic neurotransmission by increasing the:",
-        "options": ["A. Channel opening duration of GABA-A Cl- channels", "B. Channel opening frequency of GABA-A Cl- channels", "C. Synthesis of GABA", "D. Reuptake of glutamate"],
-        "answer": "B. Channel opening frequency of GABA-A Cl- channels",
-        "exp": "Benzodiazepines increase GABA-A channel opening FREQUENCY (Barbiturates increase DURATION)."
-    },
-    {
-        "id": "rx20", "type": "Direct MCQs",
-        "q": "Which cholinesterase inhibitor crosses the blood-brain barrier and is used to improve cognitive function in Alzheimer's disease?",
-        "options": ["A. Neostigmine", "B. Pyridostigmine", "C. Donepezil / Rivastigmine", "D. Edrophonium"],
-        "answer": "C. Donepezil / Rivastigmine",
-        "exp": "Donepezil, Rivastigmine, and Galantamine are lipophilic central acetylcholinesterase inhibitors used in Alzheimer's disease."
-    }
-]
-
-def render_quiz(q_list, tab_key):
-    st.write(f"**Total Questions: {len(q_list)}**")
-    filter_type = st.selectbox(f"Filter Question Type ({tab_key}):", ["All", "Case Scenarios", "Direct MCQs", "True or False", "Exceptions"], key=f"f_{tab_key}")
-    filtered = q_list if filter_type == "All" else [q for q in q_list if q['type'] == filter_type]
-    
-    for idx, item in enumerate(filtered):
-        st.markdown("---")
-        st.markdown(f"**Q{idx+1} [{item['type']}]: {item['q']}**")
-        ans_key = f"key_{tab_key}_{item['id']}"
-        choice = st.radio("Select option:", item['options'], key=ans_key)
+    try:
+        # Read the Student_Roster tab from Google Sheets
+        roster_df = conn.read(worksheet="Student_Roster", ttl=60)
+        roster_df.columns = roster_df.columns.str.strip().str.lower()
         
-        if st.button(f"Submit Q{idx+1}", key=f"btn_{ans_key}"):
-            st.session_state.answers[ans_key] = choice
+        # Locate ID and Name columns dynamically
+        id_cols = [c for c in roster_df.columns if "id" in c]
+        name_cols = [c for c in roster_df.columns if "name" in c]
+
+        if id_cols and name_cols:
+            id_col = id_cols[0]
+            name_col = name_cols[0]
             
-        if ans_key in st.session_state.answers:
-            user_ans = st.session_state.answers[ans_key]
-            if user_ans == item['answer']:
-                st.success("✅ Correct!")
+            # Clean ID series (removes trailing .0 from float conversions)
+            id_series = (
+                roster_df[id_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+                .str.replace(r"\.0$", "", regex=True)
+            )
+            
+            # Clean Name series
+            name_series = (
+                roster_df[name_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+            
+            # Check for match in either ID or Name
+            match = roster_df[(id_series == search_query) | (name_series == search_query)]
+            
+            if not match.empty:
+                row = match.iloc[0]
+                clean_id = str(row[id_col]).strip()
+                if clean_id.endswith(".0"):
+                    clean_id = clean_id[:-2]
+                    
+                return {
+                    "id": clean_id,
+                    "name": str(row[name_col]).strip()
+                }
+    except Exception as e:
+        st.error(f"Roster check error: {e}")
+        
+    return None
+
+
+# ------------------------------------------------------------------------------
+# 3. SINGLE INPUT VERIFICATION GATE (LOCKS APP UNTIL VERIFIED)
+# ------------------------------------------------------------------------------
+if st.session_state.verified_user is None:
+    st.title("🎓 Medical Science Professional Exam Portal")
+    st.subheader("🔒 Student Identity Verification")
+    st.caption("Please enter your official Student ID or Full Name once to unlock the quiz.")
+
+    user_input = st.text_input("Student ID or Full Name:", placeholder="e.g. ST203001, 203001, or Jane Doe", key="login_field")
+    
+    if st.button("Verify & Enter Quiz 🚀"):
+        if user_input.strip():
+            with st.spinner("Verifying against official student roster..."):
+                student_info = verify_student(user_input)
+                
+            if student_info:
+                st.session_state.verified_user = student_info
+                st.rerun()  # Instantly reloads page directly into the quiz
             else:
-                st.error(f"❌ Incorrect. Correct Answer: **{item['answer']}**")
-            with st.expander("💡 High-Yield Explanation"):
-                st.info(item['exp'])
+                st.error("❌ **Access Denied:** ID or Name not found in the official student roster. Please check for typos.")
+        else:
+            st.warning("⚠️ Please enter your Student ID or Name.")
 
-with tabs[0]:
-    render_quiz(q_anatomy, "anatomy")
+    st.stop()  # Prevents unverified users from viewing questions below
 
-with tabs[1]:
-    render_quiz(q_physio, "physio")
 
-with tabs[2]:
-    render_quiz(q_pharm, "pharm")
+# ------------------------------------------------------------------------------
+# 4. RESPONSE LOGGING FUNCTION
+# ------------------------------------------------------------------------------
+def log_response(module_name, category, question_text, selected_option, correct_answer, is_correct):
+    if conn is None or st.session_state.verified_user is None:
+        return
+        
+    student = st.session_state.verified_user
+    
+    try:
+        # Reads from the tab named after the module (e.g. "MSPC234")
+        existing_df = conn.read(worksheet=module_name, ttl=0)
+    except Exception:
+        existing_df = pd.DataFrame(columns=[
+            "Timestamp", "Student_ID", "Student_Name", "Module", 
+            "Category", "Question", "Selected_Option", "Correct_Answer", "Is_Correct"
+        ])
+
+    new_entry = pd.DataFrame([{
+        "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Student_ID": student["id"],
+        "Student_Name": student["name"],
+        "Module": module_name,
+        "Category": category,
+        "Question": question_text[:80] + "...",
+        "Selected_Option": selected_option,
+        "Correct_Answer": correct_answer,
+        "Is_Correct": "Correct" if is_correct else "Incorrect"
+    }])
+
+    updated_df = pd.concat([existing_df, new_entry], ignore_index=True)
+    conn.update(worksheet=module_name, data=updated_df)
+    st.toast("Response recorded to Google Sheets! ✅")
+
+
+# ------------------------------------------------------------------------------
+# 5. MAIN QUIZ INTERFACE & CATEGORY RENDERER
+# ------------------------------------------------------------------------------
+student = st.session_state.verified_user
+
+# Sidebar Identity & Logout
+st.sidebar.markdown(f"👤 **Logged-in Student:**\n- **Name:** {student['name']}\n- **ID:** `{student['id']}`")
+
+if st.sidebar.button("Log Out / Switch Student"):
+    st.session_state.verified_user = None
+    st.rerun()
+
+st.title("🎓 MSPC234: Head & Neck Anatomy, Neuroanatomy & Neuropharmacology")
+st.caption("Interactive Comprehensive Question Bank grounded in Compiled Past Exam Questions.")
+
+tab1, tab2, tab3 = st.tabs(["🫀 Part 1: Anatomy & Histology", "⚡ Part 2: Physiology & Pathophysiology", "🧪 Part 3: Biochemistry, Pharmacology & Clinical Scenarios"])
+
+def render_question_list(questions, category_name, prefix):
+    for idx, q in enumerate(questions):
+        q_label = f"[{q.get('type', 'MCQ')}] {q['question']}" if 'type' in q else q['question']
+        st.subheader(f"Q{idx+1}. {q_label}")
+        key = f"{prefix}_{idx+1}"
+        
+        user_choice = st.radio("Select your answer:", q["options"], key=key, index=None)
+        
+        if user_choice is not None:
+            selected_letter = user_choice[0]
+            is_correct = (selected_letter == q["answer"])
+            
+            if is_correct:
+                st.success(f"Correct! 🎉\n\n**Explanation:** {q['explanation']}")
+            else:
+                st.error(f"Incorrect. Correct Answer: **{q['answer']}**\n\n**Explanation:** {q['explanation']}")
+            
+            if f"logged_{key}" not in st.session_state:
+                log_response(
+                    module_name="MSPC234",
+                    category=category_name,
+                    question_text=q["question"],
+                    selected_option=selected_letter,
+                    correct_answer=q["answer"],
+                    is_correct=is_correct
+                )
+                st.session_state[f"logged_{key}"] = True
+        st.divider()
+
+q_tab1 = [
+    {
+        "type": "Case Scenario",
+        "question": "A 28-year-old patient undergoes surgical extraction of an impacted lower third molar. Postoperatively, she suffers complete loss of general tactile and taste sensation from the anterior two-thirds of the tongue on the affected side. Which nerve was injured?",
+        "options": ["A. Lingual nerve", "B. Inferior alveolar nerve", "C. Glossopharyngeal nerve", "D. Chorda tympani alone"],
+        "answer": "A",
+        "explanation": "The lingual nerve runs immediately adjacent to the lingual periosteum of the mandibular third molar alveolus, carrying sensory fibers (V3) and taste fibers (Chorda tympani)."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which cranial foramina transmits the Mandibular division of the Trigeminal nerve (V3) through the greater wing of the sphenoid bone?",
+        "options": ["A. Foramen ovale", "B. Foramen rotundum", "C. Foramen spinosum", "D. Jugular foramen"],
+        "answer": "A",
+        "explanation": "Foramen ovale transmits CN V3, accessory meningeal artery, lesser petrosal nerve, and emissary veins (MALE)."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following deep cerebellar nuclei are paired inside the white matter core EXCEPT:",
+        "options": ["A. Dentate nucleus", "B. Emboliform nucleus", "C. Red nucleus", "D. Fastigial nucleus"],
+        "answer": "C",
+        "explanation": "The Red nucleus is located in the rostral midbrain tegmentum. Cerebellar nuclei laterally to medially are Dentate, Emboliform, Globose, and Fastigial (Don't Eat Greasy Foods)."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Giant pyramidal cells of Betz are exclusively located within Layer V (Internal Pyramidal Layer) of the primary motor cortex (Brodmann Area 4).",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Betz cells are upper motor neurons situated in cortical Layer V of Brodmann Area 4, projecting long axons down the corticospinal tract."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 65-year-old woman presents with sudden onset of contralateral face and upper limb weakness, sparing the lower extremity, with motor aphasia (Broca's). Which cerebral artery is occluded?",
+        "options": ["A. Middle Cerebral Artery (MCA)", "B. Anterior Cerebral Artery (ACA)", "C. Posterior Cerebral Artery (PCA)", "D. Posterior Inferior Cerebellar Artery (PICA)"],
+        "answer": "A",
+        "explanation": "The MCA supplies the lateral precentral/postcentral gyri (face and arm areas) and Broca's area in the inferior frontal gyrus."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which developmental structure gives rise to melanocytes, schwann cells, meninges, and dentin-producing odontoblasts?",
+        "options": ["A. Neural crest cells", "B. Neural tube neuroepithelium", "C. Paraxial mesoderm", "D. Surface ectoderm"],
+        "answer": "A",
+        "explanation": "Neural crest cells migrate extensively during neurulation, forming peripheral glia, adrenal medulla, melanocytes, meninges, and head mesenchymal structures."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following cranial nerve nuclei are located within the Pons EXCEPT:",
+        "options": ["A. Abducens nucleus (CN VI)", "B. Facial motor nucleus (CN VII)", "C. Trigeminal motor nucleus (CN V)", "D. Hypoglossal nucleus (CN XII)"],
+        "answer": "D",
+        "explanation": "The Hypoglossal nucleus is located in the tegmentum of the Medulla Oblongata."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: The hippocampus forms a prominent elevation in the floor of the inferior (temporal) horn of the lateral ventricle.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "The hippocampus runs along the floor of the inferior horn, while the tail of the caudate nucleus runs along its roof."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An MRI scan of a newborn with an enlarged head reveals marked dilation of the lateral and third ventricles, with a normal fourth ventricle. Where is the anatomical obstruction located?",
+        "options": ["A. Cerebral aqueduct of Sylvius", "B. Interventricular foramen of Monro", "C. Foramina of Luschka", "D. Foramen of Magendie"],
+        "answer": "A",
+        "explanation": "Aqueductal stenosis prevents CSF flow from the 3rd to 4th ventricle, causing non-communicating triventricular hydrocephalus."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which Parasympathetic ganglion receives preganglionic nerve fibers traveling via the greater petrosal nerve (branch of CN VII)?",
+        "options": ["A. Pterygopalatine ganglion", "B. Otic ganglion", "C. Ciliary ganglion", "D. Submandibular ganglion"],
+        "answer": "A",
+        "explanation": "The greater petrosal nerve carries preganglionic parasympathetic fibers from the superior salivatory nucleus to the pterygopalatine ganglion for lacrimal secretion."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following dural venous sinuses drain directly or indirectly into the Internal Jugular Vein EXCEPT:",
+        "options": ["A. Superior sagittal sinus", "B. Sigmoid sinus", "C. Cavernous sinus", "D. Inferior sagittal sinus (drains into Straight sinus)"],
+        "answer": "D",
+        "explanation": "Inferior sagittal sinus joins the Great Cerebral Vein (Galen) to form the Straight sinus, which then flows to the confluence."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: The Tentorium Cerebelli separates the occipital lobes of the cerebrum superiorly from the cerebellum inferiorly.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "The tentorium cerebelli is a horizontal dural fold roofed over the posterior cranial fossa."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 45-year-old trauma patient exhibits bitemporal heteronymous hemianopia ('tunnel vision'). A skull base fracture has damaged which neural structure?",
+        "options": ["A. Optic chiasm", "B. Left optic tract", "C. Right optic nerve", "D. Lateral geniculate nucleus"],
+        "answer": "A",
+        "explanation": "Lesions at the optic chiasm disrupt decussating nasal retinal fibers from both eyes, destroying peripheral temporal visual fields."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which cranial nerve provides general somatic sensation to the posterior one-third of the tongue?",
+        "options": ["A. Glossopharyngeal nerve (CN IX)", "B. Lingual nerve (CN V3)", "C. Vagus nerve (CN X)", "D. Hypoglossal nerve (CN XII)"],
+        "answer": "A",
+        "explanation": "CN IX supplies BOTH general sensation and taste to the mucosal posterior third of the tongue."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following structures form part of the Basal Ganglia circuit EXCEPT:",
+        "options": ["A. Caudate nucleus", "B. Putamen", "C. Globus pallidus", "D. Dentate nucleus"],
+        "answer": "D",
+        "explanation": "The Dentate nucleus is a deep Cerebellar nucleus involved in motor coordination, not part of the basal ganglia."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: The spinal cord in adult humans normally terminates at the L1-L2 vertebral level as the conus medullaris.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Due to differential growth, the adult spinal cord ends at L1-L2, whereas in newborns it terminates around L3."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient presents with a mid-shaft humeral fracture. Physical examination reveals wrist drop and sensory loss over the dorsum of the first web space. Which nerve was injured?",
+        "options": ["A. Radial nerve", "B. Median nerve", "C. Ulnar nerve", "D. Axillary nerve"],
+        "answer": "A",
+        "explanation": "The radial nerve travels in the radial groove on the mid-shaft of the humerus, innervating forearm extensors."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which secondary brain vesicle develops into the thalamus, hypothalamus, and epithalamus?",
+        "options": ["A. Diencephalon", "B. Telencephalon", "C. Mesencephalon", "D. Metencephalon"],
+        "answer": "A",
+        "explanation": "The Prosencephalon divides into Telencephalon (cerebral hemispheres) and Diencephalon (thalamic structures)."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following are clinical manifestations of an Upper Motor Neuron (UMN) lesion EXCEPT:",
+        "options": ["A. Spastic paralysis", "B. Hyperreflexia", "C. Presence of Babinski sign", "D. Marked fasciculations and severe neurogenic muscle atrophy"],
+        "answer": "D",
+        "explanation": "Fasciculations and severe, rapid neurogenic atrophy are cardinal signs of Lower Motor Neuron (LMN) lesions."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: The anterolateral system (spinothalamic tract) decussates at the anterior white commissure within 1-2 spinal cord segments of entry.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Second-order spinothalamic neurons immediately cross in the anterior white commissure before ascending."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 50-year-old man presents with Wallenberg syndrome (lateral medullary stroke). Which artery is occluded, causing loss of pain/temperature on the ipsilateral face and contralateral body?",
+        "options": ["A. Posterior Inferior Cerebellar Artery (PICA)", "B. Anterior Spinal Artery", "C. Middle Cerebral Artery", "D. Basilar Artery"],
+        "answer": "A",
+        "explanation": "PICA supplies the anterolateral medulla, damaging the spinal trigeminal nucleus (ipsilateral face) and spinothalamic tract (contralateral body)."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which fiber bundle connects the vestibular nuclei with the oculomotor, trochlear, and abducens motor nuclei to coordinate conjugate eye movements?",
+        "options": ["A. Medial Longitudinal Fasciculus (MLF)", "B. Medial lemniscus", "C. Lateral lemniscus", "D. Trapezoid body"],
+        "answer": "A",
+        "explanation": "The MLF coordinates vestibular stimuli with extraocular motor nuclei (CN III, IV, VI) for vestibulo-ocular reflexes."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following tracts descend through the pyramids of the medulla EXCEPT:",
+        "options": ["A. Corticospinal tract", "B. Corticobulbar tract", "C. Spinothalamic tract", "D. None of the above"],
+        "answer": "C",
+        "explanation": "The spinothalamic tract is an ASCENDING sensory pathway located in the anterolateral tegmentum, not the motor pyramids."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Spina bifida is the most common neural tube defect compatible with live birth.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Spina bifida results from failure of posterior neuropore closure around day 28; maternal folic acid reduces incidence."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which specific layer of the cerebral cortex contains the receptive granular cells receiving thalamocortical afferent projections?",
+        "options": ["A. Layer IV (Internal Granular Layer)", "B. Layer I (Molecular)", "C. Layer III (External Pyramidal)", "D. Layer VI (Multiform)"],
+        "answer": "A",
+        "explanation": "Layer IV is the primary sensory input layer receiving dense projections from thalamic relay nuclei."
+    }
+]
+
+# Tab 2 Questions (25 MCQs)
+q_tab2 = [
+    {
+        "type": "Direct Question",
+        "question": "Which extracellular ion concentration is the primary determinant of the neuronal resting membrane potential?",
+        "options": ["A. Potassium (K+)", "B. Sodium (Na+)", "C. Calcium (Ca2+)", "D. Chloride (Cl-)"],
+        "answer": "A",
+        "explanation": "Neuronal resting membranes are highly permeable to K+ via leak channels; thus resting membrane potential (~ -70mV) is close to EK+."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient touches a hot stove and immediately withdraws his hand before feeling conscious pain. Which sensory fiber type conducts rapid sharp, localized nociceptive signals?",
+        "options": ["A. A-delta fibers", "B. C fibers", "C. Ia fibers", "D. Ib fibers"],
+        "answer": "A",
+        "explanation": "A-delta fibers are small, myelinated axons conducting fast, sharp pain (~5-30 m/s), whereas C fibers are unmyelinated and conduct slow, dull aching pain."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following attributes are coded by sensory receptors EXCEPT:",
+        "options": ["A. Sensory modality", "B. Stimulus location", "C. Stimulus intensity and duration", "D. Receptor quantum phase"],
+        "answer": "D",
+        "explanation": "The four fundamental coded sensory attributes are Modality, Location, Intensity, and Duration."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which divalent cation acts as an endogenous voltage-dependent blocker of the NMDA receptor channel at resting membrane potential?",
+        "options": ["A. Magnesium (Mg2+)", "B. Calcium (Ca2+)", "C. Zinc (Zn2+)", "D. Sodium (Na+)"],
+        "answer": "A",
+        "explanation": "At resting membrane potentials (-70mV), extracellular Mg2+ plugs the pore of NMDA receptors; membrane depolarization is required to expel Mg2+."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Activation of Golgi tendon organs by excessive muscle contraction triggers the Inverse Stretch Reflex, causing autogenic inhibition and muscle relaxation.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Golgi tendon organs (Ib afferents) sense tension and synapse on inhibitory interneurons in the spinal cord to protect against tendon tearing."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An ophthalmologist shines a light into a patient's right eye. The right pupil constricts (direct reflex) and the left pupil constricts simultaneously (consensual reflex). Which cranial nerve forms the afferent limb of this reflex?",
+        "options": ["A. Optic nerve (CN II)", "B. Oculomotor nerve (CN III)", "C. Ophthalmic nerve (CN V1)", "D. Facial nerve (CN VII)"],
+        "answer": "A",
+        "explanation": "CN II carries light afferents to the pretectal nucleus; CN III carries parasympathetic efferents to the ciliary sphincter muscles."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which sensory receptor type detects sustained skin pressure and low-frequency stretch?",
+        "options": ["A. Ruffini endings", "B. Pacinian corpuscles", "C. Meissner corpuscles", "D. Free nerve endings"],
+        "answer": "A",
+        "explanation": "Ruffini endings are slow-adapting mechanoreceptors detecting skin stretch; Pacinian corpuscles are fast-adapting high-frequency vibration sensors."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following sensory modalities relay through specific thalamic nuclei before reaching the primary sensory cortex EXCEPT:",
+        "options": ["A. Olfaction (Smell)", "B. Vision", "C. Audition", "D. Gustation"],
+        "answer": "A",
+        "explanation": "Olfactory tracts project directly to the primary olfactory cortex (piriform cortex / uncus) without an obligate thalamic relay."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Alpha motor neurons innervate extrafusal skeletal muscle fibers, while Gamma motor neurons innervate intrafusal muscle spindle fibers.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Alpha motor neurons drive force-producing extrafusal contraction; Gamma motor neurons adjust muscle spindle sensitivity during movement."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A Weber hearing test is performed on a patient complaining of right ear hearing loss. The sound lateralizes to the RIGHT (affected) ear. Rinne test shows bone conduction > air conduction in the right ear. What type of hearing loss is present?",
+        "options": ["A. Right Conductive hearing loss", "B. Right Sensorineural hearing loss", "C. Left Sensorineural hearing loss", "D. Normal bilateral hearing"],
+        "answer": "A",
+        "explanation": "In conductive hearing loss, ambient room noise is masked in the affected ear, making bone-conducted sound louder (Weber lateralizes to affected ear; BC > AC)."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which ion influx triggers chemical neurotransmitter vesicle exocytosis at the presynaptic axon terminal upon action potential arrival?",
+        "options": ["A. Calcium (Ca2+)", "B. Sodium (Na+)", "C. Potassium (K+)", "D. Chloride (Cl-)"],
+        "answer": "A",
+        "explanation": "Terminal depolarization opens voltage-gated Ca2+ channels; Ca2+ influx binds synaptotagmin to trigger SNARE-mediated vesicle fusion."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following proteins are essential components of the neuronal SNARE complex EXCEPT:",
+        "options": ["A. Synaptobrevin (VAMP)", "B. Syntaxin-1", "C. SNAP-25", "D. Clathrin"],
+        "answer": "D",
+        "explanation": "SNAREs consist of Synaptobrevin (v-SNARE), Syntaxin, and SNAP-25 (t-SNAREs). Clathrin is involved in endocytic vesicle coat formation."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Lateral inhibition in sensory processing suppresses lateral signal spread, enhancing spatial acuity and edge discrimination.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Inhibitory interneurons suppress adjacent sensory fields, sharpening spatial contrast at cortical levels."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An ENT specialist assesses a patient with vestibular neuritis. Warm water caloric irrigation of the right external auditory canal produces nystagmus with the fast phase beating to which side?",
+        "options": ["A. RIGHT side", "B. LEFT side", "C. Upward", "D. Downward"],
+        "answer": "A",
+        "explanation": "Mnemonic COWS: Cold Opposite, Warm Same. Warm water irrigation stimulates the ipsilateral horizontal canal, producing fast-phase nystagmus to the SAME side."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which cell membrane ion channel family is activated by capsaicin and noxious thermal heat (>43°C)?",
+        "options": ["A. TRPV1 channels", "B. TRPA1 channels", "C. TRPM8 channels", "D. ASIC channels"],
+        "answer": "A",
+        "explanation": "TRPV1 (Transient Receptor Potential Vanilloid 1) is a non-selective cation channel activated by heat, H+, and capsaicin."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following features characterize graded synaptic potentials EXCEPT:",
+        "options": ["A. Summation (temporal and spatial)", "B. Proportional amplitude to stimulus strength", "C. Electrotonic decay over distance", "D. Constant 'All-or-None' amplitude"],
+        "answer": "D",
+        "explanation": "Action potentials are 'All-or-None'. Graded potentials (EPSPs/IPSPs) are variable in amplitude and decay with distance."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: High-frequency stimulation of excitatory synapses induces Long-Term Potentiation (LTP) through NMDA receptor activation and AMPA receptor insertion.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Ca2+ influx through NMDA channels triggers CaMKII cascades, recruiting additional AMPA receptors into the postsynaptic membrane."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient presents with extreme muscle rigidity, fever, and hyperthermia following halogenated anesthetic administration. Dantrolene is administered immediately. What is the molecular target of Dantrolene?",
+        "options": ["A. Ryanodine Receptors (RyR1)", "B. Dihydropyridine Receptors (DHPR)", "C. Nicotinic Acetylcholine Receptors", "D. Sarcoplasmic Ca2+-ATPase (SERCA)"],
+        "answer": "A",
+        "explanation": "Dantrolene blocks RyR1 calcium-release channels in the sarcoplasmic reticulum, terminating uncontrolled cytosolic Ca2+ release in malignant hyperthermia."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which cranial nerve provides the afferent sensory limb for the Corneal Reflex when the cornea is touched with a cotton wisp?",
+        "options": ["A. Ophthalmic nerve (CN V1)", "B. Optic nerve (CN II)", "C. Facial nerve (CN VII)", "D. Maxillary nerve (CN V2)"],
+        "answer": "A",
+        "explanation": "CN V1 carries corneal tactile afferents to the spinal trigeminal nucleus; CN VII interneurons activate orbicularis oculi efferents."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following parameters are measurable during electromyographic (EMG) evaluation of motor units EXCEPT:",
+        "options": ["A. Motor unit action potential duration", "B. Peak-to-peak amplitude", "C. Polyphasic waveform count", "D. Direct myelin sheath thickness in millimeters"],
+        "answer": "D",
+        "explanation": "EMG measures electrical field potentials of motor units, not microscopic anatomical dimensions like myelin thickness."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: In the visual pathway, rod photoreceptors undergo hyperpolarization (not depolarization) in response to light absorption.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Light activates rhodopsin/transducin/PDE, breaking down cGMP and closing cGMP-gated Na+ channels, hyperpolarizing the rod cell."
+    },
+    {
+        "type": "Direct Question",
+        "question": "What is the function of the Sodium-Hydrogen Exchanger (NHE1) in central neurons?",
+        "options": ["A. Extrude intracellular H+ to maintain cytosolic pH homeostasis", "B. Generate action potential depolarizations", "C. Reuptake glutamate from synaptic clefts", "D. Transport glucose across the blood-brain barrier"],
+        "answer": "A",
+        "explanation": "NHE1 exchanges intracellular H+ for extracellular Na+, protecting neuronal cytoplasm against metabolic acidosis."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A neurological examination demonstrates loss of two-point discrimination and joint position sense in the left lower limb. Pain and temperature sensations are completely intact. Where is the lesion?",
+        "options": ["A. Left Fasciculus Gracilis in the posterior column", "B. Right Fasciculus Cuneatus", "C. Left Lateral Spinothalamic Tract", "D. Right Anterior Spinothalamic Tract"],
+        "answer": "A",
+        "explanation": "Fasciculus Gracilis carries conscious proprioception and fine touch from the ipsilateral lower body (below T6)."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following autonomic nervous system responses are mediated by Sympathetic activation EXCEPT:",
+        "options": ["A. Pupillary dilation (Mydriasis - Alpha-1)", "B. Increased heart rate and contractility (Beta-1)", "C. Bronchodilating airway relaxation (Beta-2)", "D. Increased salivary secretion of abundant serous fluid"],
+        "answer": "D",
+        "explanation": "Abundant watery serous salivary secretion is driven by Parasympathetic stimulation; sympathetic stimulation yields viscous, protein-rich saliva."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Pre-ganglionic autonomic sympathetic neurons originate exclusively within the Intermediolateral Gray Column (Lateral Horn) of spinal cord segments T1 through L2.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "The thoracolumbar outflow arises from lateral horn cell bodies between T1 and L2/L3."
+    }
+]
+
+# Tab 3 Questions (25 MCQs)
+q_tab3 = [
+    {
+        "type": "Case Scenario",
+        "question": "A 45-year-old asthmatic patient is prescribed a long-acting inhaled bronchodilator for nocturnal symptoms. Which selective Beta-2 adrenergic receptor agonist is indicated?",
+        "options": ["A. Formoterol", "B. Salbutamol", "C. Propranolol", "D. Atenolol"],
+        "answer": "A",
+        "explanation": "Formoterol and Salmeterol are long-acting selective Beta-2 agonists (LABAs) used for long-term asthma maintenance."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient presenting with acute muscle weakness undergoes a diagnostic test using Edrophonium (Tensilon). Immediate transient improvement in muscle strength confirms which diagnosis?",
+        "options": ["A. Myasthenia Gravis", "B. Eaton-Lambert Syndrome", "C. Multiple Sclerosis", "D. Guillain-Barre Syndrome"],
+        "answer": "A",
+        "explanation": "Edrophonium is a ultra-short-acting acetylcholinesterase inhibitor that briefly increases ACh in the neuromuscular junction, reversing myasthenic crisis."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Side effects of direct-acting or indirect-acting cholinomimetics (cholinergic excess) include all of the following EXCEPT:",
+        "options": ["A. Miosis (pupillary constriction)", "B. Excessive lacrimation and salivation", "C. Bronchoconstriction and bradycardia", "D. Mydriasis and urinary retention"],
+        "answer": "D",
+        "explanation": "Mydriasis and urinary retention are ANTI-cholinergic (antimuscarinic) effects, as summarized by the DUMBBELSS toxidrome."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which central general anesthetic agent is a dissociative NMDA receptor antagonist that provides analgesia without cardiovascular depression?",
+        "options": ["A. Ketamine", "B. Propofol", "C. Etomidate", "D. Halothane"],
+        "answer": "A",
+        "explanation": "Ketamine blocks NMDA receptors, producing dissociative anesthesia, catatonia, amnesia, and sympathetic stimulation."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Etomidate is an intravenous general anesthetic that can cause transient adrenal suppression by inhibiting 11-beta-hydroxylase.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Etomidate inhibits mitochondrial 11-beta-hydroxylase, blocking cortisol synthesis; prolonged infusions can cause adrenal insufficiency."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient undergoing surgery receives Propofol for general anesthesia induction. In addition to rapid loss of consciousness, what beneficial postoperative side effect does Propofol possess?",
+        "options": ["A. Potent antiemetic action (reduces PONV)", "B. Long-lasting analgesia", "C. Bronchodilation", "D. Hypertension"],
+        "answer": "A",
+        "explanation": "Propofol possesses inherent antiemetic properties, making it ideal for ambulatory surgery to prevent postoperative nausea and vomiting."
+    },
+    {
+        "type": "Direct Question",
+        "question": "By what mechanism does Cocaine produce intense euphoria and sympathetic activation in the central nervous system?",
+        "options": ["A. Inhibits presynaptic dopamine and norepinephrine reuptake transporters (DAT/NET)", "B. Direct agonist at dopamine D2 receptors", "C. Stimulates monoamine oxidase (MAO)", "D. Enhances GABA-A receptor opening"],
+        "answer": "A",
+        "explanation": "Cocaine blocks DAT and NET, causing accumulation of dopamine and norepinephrine in the synaptic cleft."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following general anesthetics enhance GABA-A receptor-mediated chloride currents EXCEPT:",
+        "options": ["A. Thiopental", "B. Propofol", "C. Midazolam", "D. Ketamine"],
+        "answer": "D",
+        "explanation": "Ketamine acts primarily as an NMDA receptor antagonist, unlike GABA-A potentiators such as barbiturates, propofol, and benzodiazepines."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Local anesthetics (e.g., Lidocaine) are weak bases that become ionized in acidic infected tissue, reducing lipid membrane penetration and clinical efficacy.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Acidic extracellular pH shifts local anesthetics into their charged/ionized form, hindering diffusion across the uncharged nerve sheath."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 35-year-old pregnant patient develops gestational hypertension. Which centrally acting alpha-2 adrenergic agonist is first-line for antihypertensive management in pregnancy?",
+        "options": ["A. Alpha-methyldopa", "B. Clonidine", "C. Phenylephrine", "D. Prazosin"],
+        "answer": "A",
+        "explanation": "Alpha-methyldopa is converted to alpha-methylnorepinephrine in central neurons, stimulating presynaptic alpha-2 receptors to decrease sympathetic outflow safely during pregnancy."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which drug is administered alongside atropine as a specific cholinesterase reactivator in organophosphate poisoning?",
+        "options": ["A. Pralidoxime (2-PAM)", "B. Physostigmine", "C. Neostigmine", "D. Pilocarpine"],
+        "answer": "A",
+        "explanation": "Pralidoxime cleaves the phosphate group from organophosphate-inhibited acetylcholinesterase before 'aging' occurs."
+    },
+    {
+        "type": "Exception Question",
+        "question": "Barbiturates (e.g., Phenobarbital, Thiopental) exhibit all of the following pharmacological properties EXCEPT:",
+        "options": ["A. Prolong the opening duration of GABA-A chloride channels", "B. Cause respiratory depression at high doses", "C. Exacerbate Acute Intermittent Porphyria by inducing ALA synthase", "D. Act as direct antagonists at muscarinic M3 receptors"],
+        "answer": "D",
+        "explanation": "Barbiturates do not block muscarinic receptors; their toxicity stems from CNS/respiratory depression and hepatic CYP/ALA synthase induction."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Co-administration of Epinephrine with local anesthetics delays systemic drug absorption through alpha-1 vasoconstriction, prolonging local anesthesia duration.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Epinephrine constricts local blood vessels, keeping the anesthetic localized and reducing systemic toxicity."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A 60-year-old Parkinson's disease patient experiences severe motor fluctuations and resting tremors. Which drug increases central dopamine synthesis by crossing the blood-brain barrier via L-amino acid transporters?",
+        "options": ["A. Levodopa (L-DOPA)", "B. Dopamine", "C. Carbidopa", "D. Selegiline"],
+        "answer": "A",
+        "explanation": "Dopamine cannot cross the BBB. Levodopa (its precursor) crosses via LAT1 and is converted to dopamine by DOPA decarboxylase in the brain."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which non-depolarizing neuromuscular blocking agent undergoes spontaneous ester hydrolysis and Hofmann elimination independent of liver or renal function?",
+        "options": ["A. Atracurium / Cisatracurium", "B. Vecuronium", "C. Pancuronium", "D. Succinylcholine"],
+        "answer": "A",
+        "explanation": "Cisatracurium breaks down spontaneously at physiological pH and temperature via Hofmann elimination, making it safe in organ failure."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following molecules cross the Blood-Brain Barrier (BBB) primarily via receptor-mediated transcytosis EXCEPT:",
+        "options": ["A. Insulin", "B. Transferrin", "C. Leptin", "D. Small lipophilic molecules (e.g., Ethanol, Oxygen)"],
+        "answer": "D",
+        "explanation": "Small uncharged lipophilic gases and molecules cross the BBB via simple passive transcellular diffusion."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Aripiprazole is a second-generation atypical antipsychotic that acts as a partial agonist at dopamine D2 receptors.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Aripiprazole stabilizes dopamine neurotransmission by acting as a partial D2 agonist (and 5-HT1A partial agonist / 5-HT2A antagonist)."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "A patient presenting with acute postoperative urinary retention is given Bethanechol. What is the mechanism of action of Bethanechol?",
+        "options": ["A. Direct Muscarinic (M3) receptor agonist", "B. Nicotinic receptor antagonist", "C. Alpha-1 adrenergic agonist", "D. Acetylcholinesterase inhibitor"],
+        "answer": "A",
+        "explanation": "Bethanechol is a synthetic choline ester selective for muscarinic receptors (M3), stimulating detrusor contraction and bladder emptying."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which intravenous general anesthetic enhances GABA-A currents and is notorious for causing post-anesthesia emergence delirium and visual hallucinations?",
+        "options": ["A. Ketamine", "B. Propofol", "C. Midazolam", "D. Etomidate"],
+        "answer": "A",
+        "explanation": "Ketamine causes vivid dreams, out-of-body experiences, and emergence delirium upon awakening."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following drugs are useful in the management of Alzheimer's disease by inhibiting acetylcholinesterase EXCEPT:",
+        "options": ["A. Donepezil", "B. Rivastigmine", "C. Galantamine", "D. Memantine"],
+        "answer": "D",
+        "explanation": "Memantine is an uncompetitive NMDA receptor antagonist, not a cholinesterase inhibitor."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Glucocorticoids (e.g., Dexamethasone) preserve Blood-Brain Barrier structural integrity by upregulating endothelial tight junction proteins (Claudins/Occludins).",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Steroids decrease vasogenic brain edema around tumors/infections by tightening endothelial junctions."
+    },
+    {
+        "type": "Case Scenario",
+        "question": "An asthmatic patient takes high doses of non-selective Beta-agonists and develops palpitations and tachycardia. Which receptor mediates these cardiac side effects?",
+        "options": ["A. Beta-1 adrenergic receptor", "B. Beta-2 adrenergic receptor", "C. Alpha-1 adrenergic receptor", "D. Muscarinic M2 receptor"],
+        "answer": "A",
+        "explanation": "Beta-1 receptors in the SA node and myocardium increase heart rate and contractility."
+    },
+    {
+        "type": "Direct Question",
+        "question": "Which class of antidepressant drugs inhibits Monoamine Oxidase-A (MAO-A), requiring strict dietary restriction of tyramine-rich foods (cheese, wine)?",
+        "options": ["A. MAO inhibitors (e.g., Phenelzine, Tranylcypromine)", "B. SSRIs", "C. Tricyclic Antidepressants", "D. SNRIs"],
+        "answer": "A",
+        "explanation": "MAO-A breaks down intestinal tyramine; MAOIs allow tyramine entry into blood, triggering hypertensive crisis."
+    },
+    {
+        "type": "Exception Question",
+        "question": "All of the following statements regarding Benzodiazepines (e.g., Diazepam) are TRUE EXCEPT:",
+        "options": ["A. They bind between alpha and gamma subunits of GABA-A receptors", "B. They increase the FREQUENCY of GABA-A channel opening", "C. Their overdose is rapidly reversed by Flumazenil", "D. They increase the DURATION of GABA-A channel opening"],
+        "answer": "D",
+        "explanation": "Benzodiazepines increase opening FREQUENCY; Barbiturates increase opening DURATION."
+    },
+    {
+        "type": "True or False",
+        "question": "Statement: Succinylcholine is a depolarizing neuromuscular blocker that acts as a persistent nicotinic agonist, causing initial muscle fasciculations followed by flaccid paralysis.",
+        "options": ["A. True", "B. False"],
+        "answer": "A",
+        "explanation": "Succinylcholine depolarizes the motor endplate persistently, causing Phase I block (fasciculations followed by paralysis)."
+    }
+]
+
+
+
+with tab1:
+    st.header("🫀 Part 1: Anatomy & Histology")
+    render_question_list(q_tab1, "Anatomy & Histology", "tab1")
+
+with tab2:
+    st.header("⚡ Part 2: Physiology & Pathophysiology")
+    render_question_list(q_tab2, "Physiology", "tab2")
+
+with tab3:
+    st.header("🧪 Part 3: Biochemistry, Pharmacology & Clinical Scenarios")
+    render_question_list(q_tab3, "Biochemistry & Clinical", "tab3")
