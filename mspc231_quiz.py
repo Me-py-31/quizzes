@@ -6,21 +6,32 @@ from streamlit_gsheets import GSheetsConnection
 # ------------------------------------------------------------------------------
 # STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="🧪MSPC 231 Interactive Quiz & Tracker", layout="wide")
-
-st.title("💊 MSPC 231: Cell Biology, Histology & Physiology Question Bank")
-st.caption("Categorized by Case Scenarios, True/False, Exceptions & Direct MCQs with Real-Time Response Logging")
-
-# Initialize Google Sheets connection
+st.set_page_config(page_title="🧪MSPC 231 Interactive Quiz & Tracker", layout="wide")    
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception:
     conn = None
 
+# Initialize session state for user name
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+if not st.session_state.user_name:
+    st.title("🎓 Medical Science Exam Quiz")
+    st.subheader("Welcome! Please enter your details to begin.")
+    input_name = st.text_input("Enter your Full Name or Student ID:", placeholder="e.g. John Doe / ST12345")
+    if st.button("Start Quiz 🚀"):
+        if input_name.strip():
+            st.session_state.user_name = input_name.strip()
+            st.rerun()  # Refresh page to load quiz tabs
+        else:
+            st.warning("⚠️ Please enter your name before proceeding.")
+            
+    # Stop execution here until name is provided
+    st.stop()
+
 # Initialize session state for user authentication
 if "verified_user" not in st.session_state:
     st.session_state.verified_user = None  # Stores verified student dict: {"name": ..., "id": ...}
-
 
 # ------------------------------------------------------------------------------
 # 2. STUDENT ROSTER VERIFICATION FUNCTION
