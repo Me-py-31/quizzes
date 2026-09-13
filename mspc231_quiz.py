@@ -21,8 +21,7 @@ st.set_page_config(page_title="Medical Science Quiz", layout="wide")
 # Input name for each visitor
 if "user_name" not in st.session_state:
     st.session_state.user_name = ""
-except Exception:
-    conn = None
+
 if not st.session_state.user_name:
     st.title("🎓 Medical Science Exam Quiz")
     st.subheader("Welcome! Please enter your details to begin.")
