@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="MSPC235 Interactive Exam Quiz", layout="wide")
 
-st.title("🎓 MSPC 235: Musculoskeletal & Locomotor Systems (MSPC235)")
+st.title("💪🏼 MSPC 235: Musculoskeletal & Locomotor Systems (MSPC235)")
 st.markdown("### Interactive Comprehensive Question Bank (120 Questions)")
 st.caption("Grounded in Compiled Past Exam Questions and Assessment Trends.")
 
