@@ -27,7 +27,7 @@ def log_response(module_name, category, question_text, selected_option, correct_
     if conn is None:
         return
     try:
-        existing_df = conn.read(worksheet="Sheet1", ttl=0)
+        existing_df = conn.read(worksheet=module_name, ttl=0)
     except Exception:
         existing_df = pd.DataFrame(columns=[
             "Timestamp", "User_ID", "Module", "Category", 
