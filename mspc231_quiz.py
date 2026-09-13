@@ -7,9 +7,9 @@ from streamlit_gsheets import GSheetsConnection
 # ------------------------------------------------------------------------------
 # STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="MSPC 231 Interactive Quiz & Tracker", layout="wide")
+st.set_page_config(page_title="🧪MSPC 231 Interactive Quiz & Tracker", layout="wide")
 
-st.title("🎓 MSPC 231: Cell Biology, Histology & Physiology Question Bank")
+st.title("💊 MSPC 231: Cell Biology, Histology & Physiology Question Bank")
 st.caption("Categorized by Case Scenarios, True/False, Exceptions & Direct MCQs with Real-Time Response Logging")
 
 # Initialize Google Sheets connection
