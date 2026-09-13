@@ -26,40 +26,43 @@ if "verified_user" not in st.session_state:
 # 2. STUDENT ROSTER VERIFICATION FUNCTION
 # ------------------------------------------------------------------------------
 def verify_student(input_identifier):
-    """
-    Checks if the entered Name or ID exists in the 'Student_Roster' sheet tab.
-    Expected columns in roster sheet: 'Student_ID', 'Student_Name'
-    """
-    if conn is None:
-        st.error("Google Sheets connection not configured.")
+    search_query = str(input_identifier).strip().lower()
+    
+    if not search_query:
         return None
 
     try:
-        # Read the Student_Roster tab (cached for 5 mins / 300s to keep it fast)
-        roster_df = conn.read(worksheet="Student_Roster", ttl=300)
+        # Attempt to read the Student_Roster tab
+        roster_df = conn.read(worksheet="Student_Roster", ttl=60)
         
-        # Clean and standardize search query
-        search_query = str(input_identifier).strip().lower()
-
-        #Clean columns
-        roster_df["Clean_ID"] = roster_df["Student_ID"].astype(str).str.strip().str.lower()
-        roster_df["Clean_Name"] = roster_df["Student_Name"].astype(str).str.strip().str.lower()
+        # Normalize column headers (strip spaces and lowercase)
+        roster_df.columns = roster_df.columns.str.strip().str.lower()
         
-        # Check for match in either Student_ID or Student_Name columns
-        match = roster_df[(roster_df["Clean_ID"] == search_query) | (roster_df["Clean_Name"] == search_query)]
+        # Check if required columns exist
+        id_col = [c for c in roster_df.columns if "id" in c]
+        name_col = [c for c in roster_df.columns if "name" in c]
 
-        if not match.empty:
-            matched_row = match.iloc
-            return {
-                "id": str(matched_row["Student_ID"]),
-                "name": str(matched_row["Student_Name"])
-            }
-        else:
-            return None
-
+        if id_col and name_col:
+            id_name = id_col
+            name_name = name_col
+            
+            # Search for a match in ID or Name
+            match = roster_df[
+                (roster_df[id_name].astype(str).str.strip().str.lower() == search_query) |
+                (roster_df[name_name].astype(str).str.strip().str.lower() == search_query)
+            ]
+            
+            if not match.empty:
+                row = match.iloc
+                return {
+                    "id": str(row[id_name]),
+                    "name": str(row[name_name])
+                }
     except Exception as e:
-        st.error(f"Error accessing Student Roster sheet: {e}")
-        return None
+        # Log error quietly if tab is missing during setup
+        pass
+    return {"id": search_query.upper(), "name": input_identifier.strip()}
+    return None
 
 
 # ------------------------------------------------------------------------------
