@@ -22,12 +22,16 @@ if "verified_user" not in st.session_state:
 # 2. SINGLE ROSTER VERIFICATION FUNCTION
 # ------------------------------------------------------------------------------
 def verify_student(input_identifier):
+    # Standardize input query (strip spaces and convert to lowercase)
     search_query = str(input_identifier).strip().lower()
+    if search_query.endswith(".0"):
+        search_query = search_query[:-2]
+
     if not search_query or conn is None:
         return None
 
     try:
-        # Read the Student_Roster tab
+        # Read the Student_Roster tab from Google Sheets
         roster_df = conn.read(worksheet="Student_Roster", ttl=60)
         roster_df.columns = roster_df.columns.str.strip().str.lower()
         
@@ -39,23 +43,40 @@ def verify_student(input_identifier):
             id_col = id_cols
             name_col = name_cols
             
-            # Match query against either Student_ID or Student_Name
-            match = roster_df[
-                (roster_df[id_col].astype(str).str.strip().str.lower() == search_query) |
-                (roster_df[name_col].astype(str).str.strip().str.lower() == search_query)
-            ]
+            # Clean ID series: convert floats (e.g., 203001.0 -> 203001) and trim strings
+            id_series = (
+                roster_df[id_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+                .str.replace(r"\.0$", "", regex=True)
+            )
+            
+            # Clean Name series
+            name_series = (
+                roster_df[name_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+            
+            # Check for match in either ID or Name
+            match = roster_df[(id_series == search_query) | (name_series == search_query)]
             
             if not match.empty:
                 row = match.iloc
+                clean_id = str(row[id_col]).strip()
+                if clean_id.endswith(".0"):
+                    clean_id = clean_id[:-2]
+                    
                 return {
-                    "id": str(row[id_col]),
-                    "name": str(row[name_col])
+                    "id": clean_id,
+                    "name": str(row[name_col]).strip()
                 }
     except Exception as e:
         st.error(f"Roster check error: {e}")
         
     return None
-
 
 # ------------------------------------------------------------------------------
 # 3. SINGLE INPUT LOGIN GATE (APPEARS ONLY ONCE)
