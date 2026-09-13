@@ -4,7 +4,7 @@ import datetime
 import uuid
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="MSPC231 Interactive Exam Quiz", layout="wide")
+st.set_page_config(page_title="💊 MSPC231 Interactive Exam Quiz", layout="wide")
 
 st.title("💊 MSPC 231: Cell Biology, Histology & Physiology")
 st.markdown("### Interactive Comprehensive Question Bank (120 Questions)")
