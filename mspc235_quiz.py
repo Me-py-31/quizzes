@@ -4,9 +4,9 @@ import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # ------------------------------------------------------------------------------
-# 1. STREAMLIT CONFIG & GOOGLE SHEETS CONNECTION
+# 1. STREAMLIT CONFIG & GOOGLE SHEETS INITIALIZATION
 # ------------------------------------------------------------------------------
-st.set_page_config(page_title="MSPC235 Interactive Exam Quiz", layout="wide")
+st.set_page_config(page_title="MSPC 235 Interactive Quiz & Tracker", layout="wide")
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
@@ -19,7 +19,7 @@ if "verified_user" not in st.session_state:
 
 
 # ------------------------------------------------------------------------------
-# 2. STUDENT ROSTER VERIFICATION FUNCTION
+# 2. ROSTER VERIFICATION FUNCTION (HANDLES NUMBERS & LETTERS)
 # ------------------------------------------------------------------------------
 def verify_student(input_identifier):
     search_query = str(input_identifier).strip().lower()
@@ -30,9 +30,11 @@ def verify_student(input_identifier):
         return None
 
     try:
+        # Read the Student_Roster tab from Google Sheets
         roster_df = conn.read(worksheet="Student_Roster", ttl=60)
         roster_df.columns = roster_df.columns.str.strip().str.lower()
         
+        # Locate ID and Name columns dynamically
         id_cols = [c for c in roster_df.columns if "id" in c]
         name_cols = [c for c in roster_df.columns if "name" in c]
 
@@ -40,6 +42,7 @@ def verify_student(input_identifier):
             id_col = id_cols[0]
             name_col = name_cols[0]
             
+            # Clean ID series (removes trailing .0 from float conversions)
             id_series = (
                 roster_df[id_col]
                 .astype(str)
@@ -48,6 +51,7 @@ def verify_student(input_identifier):
                 .str.replace(r"\.0$", "", regex=True)
             )
             
+            # Clean Name series
             name_series = (
                 roster_df[name_col]
                 .astype(str)
@@ -55,6 +59,7 @@ def verify_student(input_identifier):
                 .str.lower()
             )
             
+            # Check for match in either ID or Name
             match = roster_df[(id_series == search_query) | (name_series == search_query)]
             
             if not match.empty:
@@ -68,13 +73,13 @@ def verify_student(input_identifier):
                     "name": str(row[name_col]).strip()
                 }
     except Exception as e:
-        st.error(f"Roster verification error: {e}")
+        st.error(f"Roster check error: {e}")
         
     return None
 
 
 # ------------------------------------------------------------------------------
-# 3. SINGLE INPUT VERIFICATION GATE
+# 3. SINGLE INPUT VERIFICATION GATE (LOCKS APP UNTIL VERIFIED)
 # ------------------------------------------------------------------------------
 if st.session_state.verified_user is None:
     st.title("🎓 Medical Science Professional Exam Portal")
@@ -96,7 +101,7 @@ if st.session_state.verified_user is None:
         else:
             st.warning("⚠️ Please enter your Student ID or Name.")
 
-    st.stop()
+    st.stop()  # Prevents unverified users from viewing questions below
 
 
 # ------------------------------------------------------------------------------
@@ -134,7 +139,7 @@ def log_response(module_name, category, question_text, selected_option, correct_
 
 
 # ------------------------------------------------------------------------------
-# 5. MAIN QUIZ INTERFACE & SIDEBAR
+# 5. MAIN QUIZ INTERFACE & CATEGORY RENDERER
 # ------------------------------------------------------------------------------
 student = st.session_state.verified_user
 
@@ -144,11 +149,38 @@ if st.sidebar.button("Log Out / Switch Student"):
     st.session_state.verified_user = None
     st.rerun()
 
-st.title("🎓 MSPC 235: Pharmacology & Therapeutics (MSPC235)")
-st.markdown("### Interactive Comprehensive Question Bank (120 Questions)")
-st.caption("Grounded in Compiled Past Exam Questions and Assessment Trends.")
+st.title("🎓 MSPC 235: Musculoskeletal & Locomotor Systems (120 Questions)")
+st.caption("Interactive Comprehensive Question Bank grounded in Compiled Past Exam Questions.")
 
-# Define tabs
+tab1, tab2, tab3 = st.tabs(["🫀 Anatomy & Histology (40 Qs)", "⚡ Physiology (40 Qs)", "🧪 Biochemistry & Bioenergetics (40 Qs)"])
+
+def render_question_list(questions, category_name, prefix):
+    for idx, q in enumerate(questions):
+        st.subheader(f"Q{q['id']}. {q['question']}")
+        key = f"{prefix}_{q['id']}"
+        
+        user_choice = st.radio("Select your answer:", q["options"], key=key, index=None)
+        
+        if user_choice is not None:
+            is_correct = (user_choice == q["answer"])
+            
+            if is_correct:
+                st.success(f"Correct! 🎉\n\n**Explanation:** {q['explanation']}")
+            else:
+                st.error(f"Incorrect. Correct Answer: **{q['answer']}**\n\n**Explanation:** {q['explanation']}")
+            
+            if f"logged_{key}" not in st.session_state:
+                log_response(
+                    module_name="MSPC235",
+                    category=category_name,
+                    question_text=q["question"],
+                    selected_option=user_choice,
+                    correct_answer=q["answer"],
+                    is_correct=is_correct
+                )
+                st.session_state[f"logged_{key}"] = True
+        st.divider()
+
 
 ANAT_QS = [
     {
@@ -1717,71 +1749,16 @@ BIOCHEM_QS = [
     }
 ]
 
-def render_quiz_section(questions, category_name, prefix):
-    if f"score_{prefix}" not in st.session_state:
-        st.session_state[f"score_{prefix}"] = 0
-    if f"submitted_{prefix}" not in st.session_state:
-        st.session_state[f"submitted_{prefix}"] = {}
 
-    user_answers = {}
-    
-    for q in questions:
-        qid = q["id"]
-        st.subheader(f"Q{qid}. {q['question']}")
-        opts = q["options"]
-        
-        user_choice = st.radio(
-            "Select your answer:",
-            opts,
-            key=f"{prefix}_q_{qid}",
-            index=None
-        )
-        user_answers[qid] = user_choice
-        
-        if user_choice is not None:
-            is_correct = (user_choice == q["answer"])
-            if f"logged_{prefix}_{qid}" not in st.session_state:
-                log_response(
-                    module_name="MSPC235",
-                    category=category_name,
-                    question_text=q["question"],
-                    selected_option=user_choice,
-                    correct_answer=q["answer"],
-                    is_correct=is_correct
-                )
-                st.session_state[f"logged_{prefix}_{qid}"] = True
-
-        if st.session_state[f"submitted_{prefix}"].get(qid):
-            if user_choice == q["answer"]:
-                st.success(f"✅ Correct! Answer: {q['answer']}")
-            else:
-                st.error(f"❌ Incorrect. Correct Answer: {q['answer']}")
-            st.info(f"💡 **Explanation:** {q['explanation']}")
-        st.markdown("---")
-
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button(f"Submit All Answers", key=f"btn_{prefix}"):
-            correct_count = 0
-            for q in questions:
-                qid = q["id"]
-                st.session_state[f"submitted_{prefix}"][qid] = True
-                if user_answers.get(qid) == q["answer"]:
-                    correct_count += 1
-            st.session_state[f"score_{prefix}"] = correct_count
-            st.rerun()
-
-    if any(st.session_state[f"submitted_{prefix}"].values()):
-        score = st.session_state[f"score_{prefix}"]
-        total = len(questions)
-        pct = (score / total) * 100
-        st.metric(label=f"Module Score ({prefix.upper()})", value=f"{score} / {total}", delta=f"{pct:.1f}%")
 
 with tab1:
-    render_quiz_section(ANAT_QS, "General Principles", "part1")
+    st.header("🫀 Anatomy & Histology (40 Questions)")
+    render_question_list(ANAT_QS, "Anatomy & Histology", "anat")
 
 with tab2:
-    render_quiz_section(PHYS_QS, "Autonomic & Cardiovascular", "part2")
+    st.header("⚡ Physiology (40 Questions)")
+    render_question_list(PHYS_QS, "Physiology", "phys")
 
 with tab3:
-    render_quiz_section(BIOCHEM_QS, "Chemotherapy & Toxicology", "part3")
+    st.header("🧪 Biochemistry & Bioenergetics (40 Questions)")
+    render_question_list(BIOCHEM_QS, "Biochemistry", "biochem")
