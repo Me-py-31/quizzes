@@ -330,13 +330,50 @@ st.progress(st.session_state.current_index / total_q, text=f"Question {st.sessio
 
 col_q, col_timer = st.columns([3, 1])
 
+col_q, col_timer = st.columns([3, 1])
+
 with col_timer:
-    if remaining > 20:
-        st.markdown(f"### ⏳ Time: `<span style='color:green;'>{remaining}s</span>`", unsafe_allow_html=True)
-    elif remaining > 10:
-        st.markdown(f"### ⚠️ Time: `<span style='color:orange;'>{remaining}s</span>`", unsafe_allow_html=True)
-    else:
-        st.markdown(f"### 🚨 Time: `<span style='color:red;'>{remaining}s</span>`", unsafe_allow_html=True)
+  # 1. Dynamic color scheme based on remaining seconds
+  if remaining > 20:
+    border_color = "#28a745"  # Green
+    bg_color = "#e8f5e9"
+    text_color = "#1b5e20"
+    icon = "⏳"
+    label = "TIME REMAINING"
+  elif remaining > 10:
+    border_color = "#ff9800"  # Orange
+    bg_color = "#fff3e0"
+    text_color = "#e65100"
+    icon = "⚠️"
+    label = "HURRY UP!"
+  else:
+    border_color = "#dc3545"  # Red
+    bg_color = "#ffebee"
+    text_color = "#b71c1c"
+    icon = "🚨"
+    label = "CRITICAL TIME!"
+
+  # 2. Custom HTML / CSS Styled Box 
+  timer_box_html = f"""
+    <div style="
+        background-color: {bg_color};
+        border: 2px solid {border_color};
+        border-radius: 12px;
+        padding: 10px 16px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        margin-bottom: 12px;
+    ">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: {text_color}; text-transform: uppercase;">
+            {icon} {label}
+        </div>
+        <div style="font-size: 32px; font-weight: 800; color: {text_color}; line-height: 1.1; margin-top: 2px;">
+            {remaining}<span style="font-size: 18px; font-weight: 600;">s</span>
+        </div>
+    </div>
+    """
+  st.markdown(timer_box_html, unsafe_allow_html=True)
 
 with col_q:
     st.caption(f"Category: {q['category']}")
