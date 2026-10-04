@@ -163,6 +163,26 @@ st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank wit
 tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
 tabs = st.tabs(tab_names)
 
+
+# Callbacks for Navigation and State Changes
+def go_prev_cb(cat_name, prev_tuple):
+    if prev_tuple:
+        select_key = f"select_{cat_name}"
+        st.session_state[select_key] = prev_tuple
+        st.session_state.active_indices[cat_name] = prev_tuple[0]
+
+def go_next_cb(cat_name, next_tuple):
+    if next_tuple:
+        select_key = f"select_{cat_name}"
+        st.session_state[select_key] = next_tuple
+        st.session_state.active_indices[cat_name] = next_tuple[0]
+
+def toggle_bm_cb(q_id_to_bm):
+    if q_id_to_bm in st.session_state.bookmarks:
+        st.session_state.bookmarks.remove(q_id_to_bm)
+    else:
+        st.session_state.bookmarks.add(q_id_to_bm)
+
 def render_category_quiz(category_name, tab_idx):
     cat_questions = [q for q in QUIZ_DATA if q["category"] == category_name]
     num_cat_q = len(cat_questions)
@@ -198,19 +218,14 @@ def render_category_quiz(category_name, tab_idx):
         st.info(f"No questions match the selected filter: **{q_filter}**.")
         return
 
-    # Select box for question index
-    curr_cat_idx = st.session_state.active_indices.get(category_name, 0)
-    
-    valid_indices = [idx for idx, _ in filtered_questions]
-    if curr_cat_idx not in valid_indices:
-        curr_cat_idx = valid_indices[0]
-
-    current_filtered_pos = valid_indices.index(curr_cat_idx)
-    current_tuple = filtered_questions[current_filtered_pos]
-
     select_key = f"select_{category_name}"
+    
+    # Ensure select_key exists in st.session_state and its value is valid
     if select_key not in st.session_state or st.session_state[select_key] not in filtered_questions:
-        st.session_state[select_key] = current_tuple
+        st.session_state[select_key] = filtered_questions[0]
+
+    current_tuple = st.session_state[select_key]
+    current_filtered_pos = filtered_questions.index(current_tuple)
 
     with col_nav:
         selected_q_tuple = st.selectbox(
@@ -227,33 +242,42 @@ def render_category_quiz(category_name, tab_idx):
     # Prev / Next Controls & Bookmark
     col_prev, col_bm, col_next = st.columns([1, 2, 1])
     
+    prev_disabled = (current_filtered_pos == 0)
+    prev_target = filtered_questions[current_filtered_pos - 1] if not prev_disabled else None
+
+    next_disabled = (current_filtered_pos == len(filtered_questions) - 1)
+    next_target = filtered_questions[current_filtered_pos + 1] if not next_disabled else None
+
     with col_prev:
-        if st.button("⬅️ Previous", key=f"prev_{q_id}", disabled=(current_filtered_pos == 0)):
-            prev_filtered_pos = current_filtered_pos - 1
-            prev_tuple = filtered_questions[prev_filtered_pos]
-            st.session_state[select_key] = prev_tuple
-            st.session_state.active_indices[category_name] = prev_tuple[0]
-            st.rerun()
+        st.button(
+            "⬅️ Previous", 
+            key=f"prev_{q_id}", 
+            disabled=prev_disabled,
+            on_click=go_prev_cb,
+            args=(category_name, prev_target)
+        )
 
     with col_bm:
         is_bm = q_id in st.session_state.bookmarks
         bm_label = "🔖 Bookmarked" if is_bm else "🏷️ Bookmark Question"
-        if st.button(bm_label, key=f"bm_{q_id}"):
-            if is_bm:
-                st.session_state.bookmarks.remove(q_id)
-            else:
-                st.session_state.bookmarks.add(q_id)
-            st.rerun()
+        st.button(
+            bm_label, 
+            key=f"bm_{q_id}",
+            on_click=toggle_bm_cb,
+            args=(q_id,)
+        )
 
     with col_next:
-        if st.button("Next ➡️", key=f"next_{q_id}", disabled=(current_filtered_pos == len(filtered_questions) - 1)):
-            next_filtered_pos = current_filtered_pos + 1
-            next_tuple = filtered_questions[next_filtered_pos]
-            st.session_state[select_key] = next_tuple
-            st.session_state.active_indices[category_name] = next_tuple[0]
-            st.rerun()
+        st.button(
+            "Next ➡️", 
+            key=f"next_{q_id}", 
+            disabled=next_disabled,
+            on_click=go_next_cb,
+            args=(category_name, next_target)
+        )
 
     st.divider()
+
 
     # --- 1-MINUTE QUESTION TIMER COMPONENT WITH AUTO-ADVANCE ---
     timer_html = f"""
