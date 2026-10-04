@@ -201,20 +201,23 @@ def render_category_quiz(category_name, tab_idx):
     # Select box for question index
     curr_cat_idx = st.session_state.active_indices.get(category_name, 0)
     
-    # Ensure current index is within range of filtered questions
     valid_indices = [idx for idx, _ in filtered_questions]
     if curr_cat_idx not in valid_indices:
         curr_cat_idx = valid_indices[0]
 
     current_filtered_pos = valid_indices.index(curr_cat_idx)
+    current_tuple = filtered_questions[current_filtered_pos]
+
+    select_key = f"select_{category_name}"
+    if select_key not in st.session_state or st.session_state[select_key] not in filtered_questions:
+        st.session_state[select_key] = current_tuple
 
     with col_nav:
         selected_q_tuple = st.selectbox(
             f"Select Question (Total {num_cat_q}):",
             filtered_questions,
             format_func=lambda item: f"Q{item[0]+1}: {item[1]['question'][:70]}...",
-            index=current_filtered_pos,
-            key=f"select_{category_name}"
+            key=select_key
         )
         current_q_idx, current_q = selected_q_tuple
         st.session_state.active_indices[category_name] = current_q_idx
@@ -226,8 +229,10 @@ def render_category_quiz(category_name, tab_idx):
     
     with col_prev:
         if st.button("⬅️ Previous", key=f"prev_{q_id}", disabled=(current_filtered_pos == 0)):
-            prev_idx = valid_indices[current_filtered_pos - 1]
-            st.session_state.active_indices[category_name] = prev_idx
+            prev_filtered_pos = current_filtered_pos - 1
+            prev_tuple = filtered_questions[prev_filtered_pos]
+            st.session_state[select_key] = prev_tuple
+            st.session_state.active_indices[category_name] = prev_tuple[0]
             st.rerun()
 
     with col_bm:
@@ -241,14 +246,16 @@ def render_category_quiz(category_name, tab_idx):
             st.rerun()
 
     with col_next:
-        if st.button("Next ➡️", key=f"next_{q_id}", disabled=(current_filtered_pos == len(valid_indices) - 1)):
-            next_idx = valid_indices[current_filtered_pos + 1]
-            st.session_state.active_indices[category_name] = next_idx
+        if st.button("Next ➡️", key=f"next_{q_id}", disabled=(current_filtered_pos == len(filtered_questions) - 1)):
+            next_filtered_pos = current_filtered_pos + 1
+            next_tuple = filtered_questions[next_filtered_pos]
+            st.session_state[select_key] = next_tuple
+            st.session_state.active_indices[category_name] = next_tuple[0]
             st.rerun()
 
     st.divider()
 
-    # --- 1-MINUTE QUESTION TIMER COMPONENT ---
+    # --- 1-MINUTE QUESTION TIMER COMPONENT WITH AUTO-ADVANCE ---
     timer_html = f"""
     <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
         <span style="font-weight: bold; color: #38bdf8; font-size: 0.95rem;">⏱️ Question Timer (1-Min Limit):</span>
@@ -269,7 +276,19 @@ def render_category_quiz(category_name, tab_idx):
                 }}
                 if (timeLeft <= 0) {{
                     clearInterval(interval);
-                    display.innerText = "TIME EXPIRED";
+                    display.innerText = "TIME EXPIRED - MOVING TO NEXT...";
+                    try {{
+                        var buttons = window.parent.document.querySelectorAll('button');
+                        for (var i = 0; i < buttons.length; i++) {{
+                            var txt = buttons[i].innerText || buttons[i].textContent;
+                            if (txt && txt.includes('Next ➡️') && !buttons[i].disabled) {{
+                                buttons[i].click();
+                                break;
+                            }}
+                        }}
+                    }} catch(e) {{
+                        console.log("Timer auto-advance error:", e);
+                    }}
                 }}
             }}, 1000);
         }})();
