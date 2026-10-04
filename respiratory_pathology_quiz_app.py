@@ -220,6 +220,46 @@ st.markdown("""
         margin-top: 1rem;
         color: #ffffff;
     }
+
+    /* Fix Code Tags (prevent white-on-white) */
+    code, .stMainBlockContainer code, [data-testid="stMain"] code {
+        background-color: #0f172a !important;
+        color: #38bdf8 !important;
+        border: 1px solid #334155 !important;
+        padding: 0.15rem 0.4rem !important;
+        border-radius: 4px !important;
+        font-family: monospace !important;
+    }
+
+    /* Fix Lists and Bold Text in Main Content */
+    [data-testid="stMain"] ol, 
+    [data-testid="stMain"] ul, 
+    [data-testid="stMain"] li {
+        color: #f8fafc !important;
+    }
+    [data-testid="stMain"] b, 
+    [data-testid="stMain"] strong {
+        color: #ffffff !important;
+    }
+
+    /* File Uploader Container Styling */
+    div[data-testid="stFileUploader"] {
+        background-color: #1e293b !important;
+        border: 1.5px dashed #38bdf8 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+    }
+    div[data-testid="stFileUploader"] * {
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+        background-color: #e2e8f0 !important;
+        border: 1.5px dashed #0284c7 !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="stFileUploader"] * {
+        color: #000000 !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -317,14 +357,24 @@ if not st.session_state.get("quiz_started", False):
             <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
         </div>
         
-        <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 1.25rem; text-align: left; max-width: 650px; margin: 0 auto;">
-            <h4 style="color: #38bdf8 !important; margin-top: 0; font-weight: 700; font-size: 1.05rem;">💾 How to Save Your Progress:</h4>
-            <ol style="color: #f8fafc !important; font-size: 0.95rem; margin-bottom: 0; padding-left: 1.2rem; line-height: 1.6;">
-                <li><b>Automatic In-Session Saving:</b> Your answers and bookmarks are automatically saved in real-time as you complete questions.</li>
-                <li><b>Save to Your Device (No GitHub Needed!):</b> Click <b>"📥 Download Saved Progress"</b> in the left Sidebar or 📊 Analytics tab to save your <code>respiratory_pathology_results.json</code> file to your computer or phone.</li>
-                <li><b>Restore Anytime:</b> Whenever you return to the app, use <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your JSON file and pick up right where you left off!</li>
+        
+        <div style="background-color: #1e293b; border: 1.5px solid #38bdf8; border-radius: 10px; padding: 1.5rem; text-align: left; max-width: 680px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <h4 style="color: #38bdf8 !important; margin-top: 0; margin-bottom: 0.75rem; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>💾</span> <span>How to Save & Restore Your Progress:</span>
+            </h4>
+            <ol style="color: #f8fafc !important; font-size: 0.95rem; margin-bottom: 0; padding-left: 1.25rem; line-height: 1.7;">
+                <li style="color: #f8fafc !important; margin-bottom: 0.5rem;">
+                    <b style="color: #ffffff !important;">Automatic In-Session Saving:</b> Your answers and bookmarks are automatically saved in real-time as you complete questions.
+                </li>
+                <li style="color: #f8fafc !important; margin-bottom: 0.5rem;">
+                    <b style="color: #ffffff !important;">Save to Your Device (No Account Needed):</b> Click <span style="color: #38bdf8 !important; font-weight: bold;">"📥 Download Saved Progress"</span> in the left Sidebar or <b>📊 Analytics</b> tab to save your <code style="background-color: #0f172a !important; color: #38bdf8 !important; border: 1px solid #334155 !important; padding: 2px 6px !important; border-radius: 4px !important; font-weight: bold;">respiratory_pathology_results.json</code> file to your computer or phone.
+                </li>
+                <li style="color: #f8fafc !important;">
+                    <b style="color: #ffffff !important;">Restore Anytime:</b> Whenever you return to the app, use <span style="color: #38bdf8 !important; font-weight: bold;">"📤 Restore Saved Progress"</span> in the left Sidebar to upload your JSON file and pick up right where you left off!
+                </li>
             </ol>
         </div>
+
     </div>
     """, unsafe_allow_html=True)
 
@@ -337,10 +387,6 @@ else:
     # --- MAIN INTERFACE HEADER ---
     st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank with 1-Min Time Limit & Instant Rationale</div>', unsafe_allow_html=True)
-
-    # --- CATEGORY TABS ---
-    tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
-    tabs = st.tabs(tab_names)
 
     # --- CATEGORY TABS ---
     tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
