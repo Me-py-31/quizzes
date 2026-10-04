@@ -54,15 +54,53 @@ if "active_indices" not in st.session_state:
 # --- CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
-    /* Pure Black Background with High Contrast White Text */
+    /* Main App Black Background with High Contrast White Text */
     .stApp {
         background-color: #000000 !important;
         color: #ffffff !important;
     }
 
-    /* Force all text elements, labels, and spans to be bright white */
-    .stApp p, .stApp label, .stApp span, .stApp div, .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+    /* Main Content Area Text Elements (excluding Sidebar) */
+    .stMainBlockContainer p, 
+    .stMainBlockContainer label, 
+    .stMainBlockContainer span, 
+    .stMainBlockContainer div, 
+    .stMainBlockContainer h1, 
+    .stMainBlockContainer h2, 
+    .stMainBlockContainer h3, 
+    .stMainBlockContainer h4,
+    [data-testid="stMain"] p,
+    [data-testid="stMain"] label,
+    [data-testid="stMain"] span,
+    [data-testid="stMain"] h1,
+    [data-testid="stMain"] h2,
+    [data-testid="stMain"] h3,
+    [data-testid="stMain"] h4 {
         color: #ffffff;
+    }
+
+    /* FORCE SIDEBAR TEXT TO REMAIN BLACK */
+    section[data-testid="stSidebar"], 
+    [data-testid="stSidebar"], 
+    .stSidebar {
+        background-color: #f1f5f9 !important;
+    }
+    section[data-testid="stSidebar"] *, 
+    [data-testid="stSidebar"] *, 
+    .stSidebar *,
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] div, 
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] h4,
+    [data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"] .stCaption,
+    [data-testid="stSidebar"] .stMetricValue,
+    [data-testid="stSidebar"] .stMetricLabel {
+        color: #000000 !important;
     }
 
     /* Titles */
@@ -128,10 +166,22 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(56, 189, 248, 0.5) !important;
     }
 
+    /* Sidebar Buttons (if any) should have black text or distinct styling */
+    [data-testid="stSidebar"] div.stButton > button {
+        background-color: #e2e8f0 !important;
+        color: #000000 !important;
+        border: 1px solid #94a3b8 !important;
+    }
+    [data-testid="stSidebar"] div.stButton > button:hover {
+        background-color: #cbd5e1 !important;
+        color: #000000 !important;
+    }
+
     /* Primary Buttons (Submit) */
     div.stButton > button[kind="primary"] {
         background-color: #0284c7 !important;
         border-color: #38bdf8 !important;
+        color: #ffffff !important;
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #0369a1 !important;
