@@ -54,30 +54,42 @@ if "active_indices" not in st.session_state:
 # --- CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
+    /* Pure Black Background with High Contrast White Text */
     .stApp {
-        background-color: #0f172a;
-        color: #f8fafc;
+        background-color: #000000 !important;
+        color: #ffffff !important;
     }
+
+    /* Force all text elements, labels, and spans to be bright white */
+    .stApp p, .stApp label, .stApp span, .stApp div, .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+        color: #ffffff;
+    }
+
+    /* Titles */
     .main-title {
         font-size: 2.2rem;
         font-weight: 800;
-        color: #38bdf8;
+        color: #38bdf8 !important;
         text-align: center;
         margin-bottom: 0.2rem;
     }
     .sub-title {
         font-size: 1.05rem;
-        color: #94a3b8;
+        color: #cbd5e1 !important;
         text-align: center;
         margin-bottom: 1.5rem;
     }
+
+    /* Question Card */
     .q-card {
-        background-color: #1e293b;
+        background-color: #111827;
         padding: 1.5rem;
         border-radius: 12px;
-        border: 1px solid #334155;
+        border: 1px solid #374151;
         margin-bottom: 1rem;
     }
+
+    /* Question Type Badges */
     .q-badge {
         display: inline-block;
         padding: 0.25rem 0.75rem;
@@ -86,17 +98,74 @@ st.markdown("""
         font-weight: 600;
         margin-right: 0.5rem;
     }
-    .badge-vignette { background-color: #0284c7; color: #ffffff; }
-    .badge-exception { background-color: #e11d48; color: #ffffff; }
-    .badge-conceptual { background-color: #7c3aed; color: #ffffff; }
-    .badge-recall { background-color: #059669; color: #ffffff; }
-    
+    .badge-vignette { background-color: #0284c7; color: #ffffff !important; }
+    .badge-exception { background-color: #e11d48; color: #ffffff !important; }
+    .badge-conceptual { background-color: #7c3aed; color: #ffffff !important; }
+    .badge-recall { background-color: #059669; color: #ffffff !important; }
+
+    /* PERMANENT VISIBILITY FOR BUTTONS (Previous, Next, Bookmark, etc.) */
+    div.stButton > button {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 1.5px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+        width: 100% !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    div.stButton > button:hover {
+        background-color: #0284c7 !important;
+        color: #ffffff !important;
+        border-color: #7dd3fc !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.5) !important;
+    }
+
+    /* Primary Buttons (Submit) */
+    div.stButton > button[kind="primary"] {
+        background-color: #0284c7 !important;
+        border-color: #38bdf8 !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #0369a1 !important;
+        border-color: #7dd3fc !important;
+    }
+
+    /* Disabled state for buttons */
+    div.stButton > button:disabled {
+        background-color: #111827 !important;
+        color: #4b5563 !important;
+        border-color: #1f2937 !important;
+        cursor: not-allowed !important;
+        opacity: 0.6 !important;
+    }
+
+    /* Selectbox and Radio styling for black theme */
+    div[data-baseweb="select"] > div {
+        background-color: #111827 !important;
+        border-color: #374151 !important;
+        color: #ffffff !important;
+    }
+    div[role="listbox"] {
+        background-color: #111827 !important;
+        color: #ffffff !important;
+    }
+
+    /* Explanation Box */
     .explanation-box {
-        background-color: #1e293b;
+        background-color: #111827;
         border-left: 4px solid #38bdf8;
         padding: 1rem;
         border-radius: 4px;
         margin-top: 1rem;
+        color: #ffffff;
     }
 </style>
 """, unsafe_allow_html=True)
