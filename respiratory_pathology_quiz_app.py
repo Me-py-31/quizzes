@@ -7253,53 +7253,25 @@ if "quiz_started" not in st.session_state:
 # --- CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
-    /* Main App Black Background with High Contrast White Text */
+    /* Global App Background */
     .stApp {
         background-color: #000000 !important;
-        color: #ffffff !important;
+        color: #f8fafc !important;
     }
 
-    /* Main Content Area Text Elements (excluding Sidebar) */
-    .stMainBlockContainer p, 
-    .stMainBlockContainer label, 
-    .stMainBlockContainer span, 
-    .stMainBlockContainer div, 
-    .stMainBlockContainer h1, 
-    .stMainBlockContainer h2, 
-    .stMainBlockContainer h3, 
-    .stMainBlockContainer h4,
-    [data-testid="stMain"] p,
-    [data-testid="stMain"] label,
-    [data-testid="stMain"] span,
-    [data-testid="stMain"] h1,
-    [data-testid="stMain"] h2,
-    [data-testid="stMain"] h3,
-    [data-testid="stMain"] h4 {
+    /* Main Container Padding & Background */
+    [data-testid="stMain"], .stMainBlockContainer {
+        background-color: #000000 !important;
+        color: #f8fafc !important;
+    }
+
+    /* Main Area Headers & Text */
+    [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, 
+    [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] h6,
+    [data-testid="stMain"] p, [data-testid="stMain"] span, [data-testid="stMain"] label,
+    [data-testid="stMain"] li, [data-testid="stMain"] ol, [data-testid="stMain"] ul,
+    [data-testid="stMain"] div, [data-testid="stMain"] b, [data-testid="stMain"] strong {
         color: #ffffff;
-    }
-
-    /* FORCE SIDEBAR TEXT TO REMAIN BLACK */
-    section[data-testid="stSidebar"], 
-    [data-testid="stSidebar"], 
-    .stSidebar {
-        background-color: #f1f5f9 !important;
-    }
-    section[data-testid="stSidebar"] *, 
-    [data-testid="stSidebar"] *, 
-    .stSidebar *,
-    [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] span, 
-    [data-testid="stSidebar"] div, 
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3, 
-    [data-testid="stSidebar"] h4,
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] .stCaption,
-    [data-testid="stSidebar"] .stMetricValue,
-    [data-testid="stSidebar"] .stMetricLabel {
-        color: #000000 !important;
     }
 
     /* Titles */
@@ -7312,18 +7284,77 @@ st.markdown("""
     }
     .sub-title {
         font-size: 1.05rem;
-        color: #cbd5e1 !important;
+        color: #94a3b8 !important;
         text-align: center;
         margin-bottom: 1.5rem;
     }
 
+    /* Welcome Card Styling */
+    .welcome-card {
+        background-color: #0f172a !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
+        padding: 2rem 1.5rem !important;
+        margin: 1.5rem 0 !important;
+        text-align: center !important;
+    }
+    .welcome-card h2 {
+        color: #38bdf8 !important;
+        margin-bottom: 1rem !important;
+        font-size: 1.6rem !important;
+        font-weight: 800 !important;
+    }
+    .welcome-card p {
+        color: #e2e8f0 !important;
+        font-size: 1.05rem !important;
+        line-height: 1.6 !important;
+        max-width: 650px !important;
+        margin: 0 auto 1.5rem auto !important;
+    }
+
+    /* Steps Box Inside Welcome Card */
+    .steps-box {
+        background-color: #1e293b !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 10px !important;
+        padding: 1.5rem !important;
+        text-align: left !important;
+        max-width: 650px !important;
+        margin: 0 auto !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    }
+    .steps-box h4 {
+        color: #38bdf8 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0.75rem !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+    }
+    .steps-box ol {
+        color: #ffffff !important;
+        font-size: 0.98rem !important;
+        margin-bottom: 0 !important;
+        padding-left: 1.3rem !important;
+        line-height: 1.7 !important;
+    }
+    .steps-box li {
+        color: #ffffff !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .steps-box li b, .steps-box li strong {
+        color: #7dd3fc !important;
+    }
+
     /* Question Card */
     .q-card {
-        background-color: #111827;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border: 1px solid #374151;
-        margin-bottom: 1rem;
+        background-color: #111827 !important;
+        padding: 1.5rem !important;
+        border-radius: 12px !important;
+        border: 1px solid #374151 !important;
+        margin-bottom: 1rem !important;
+    }
+    .q-card h3 {
+        color: #f8fafc !important;
     }
 
     /* Question Type Badges */
@@ -7335,10 +7366,10 @@ st.markdown("""
         font-weight: 600;
         margin-right: 0.5rem;
     }
-    .badge-vignette { background-color: #0284c7; color: #ffffff !important; }
-    .badge-exception { background-color: #e11d48; color: #ffffff !important; }
-    .badge-conceptual { background-color: #7c3aed; color: #ffffff !important; }
-    .badge-recall { background-color: #059669; color: #ffffff !important; }
+    .badge-vignette { background-color: #0284c7 !important; color: #ffffff !important; }
+    .badge-exception { background-color: #e11d48 !important; color: #ffffff !important; }
+    .badge-conceptual { background-color: #7c3aed !important; color: #ffffff !important; }
+    .badge-recall { background-color: #059669 !important; color: #ffffff !important; }
 
     /* PERMANENT VISIBILITY FOR BUTTONS */
     div.stButton > button {
@@ -7351,29 +7382,11 @@ st.markdown("""
         font-size: 0.95rem !important;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
         width: 100% !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }
-
     div.stButton > button:hover {
         background-color: #0284c7 !important;
         color: #ffffff !important;
         border-color: #7dd3fc !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.5) !important;
-    }
-
-    /* Sidebar Buttons */
-    [data-testid="stSidebar"] div.stButton > button {
-        background-color: #e2e8f0 !important;
-        color: #000000 !important;
-        border: 1px solid #94a3b8 !important;
-    }
-    [data-testid="stSidebar"] div.stButton > button:hover {
-        background-color: #cbd5e1 !important;
-        color: #000000 !important;
     }
 
     /* Primary Buttons (Begin Quiz, Submit) */
@@ -7387,16 +7400,24 @@ st.markdown("""
         border-color: #7dd3fc !important;
     }
 
-    /* Disabled state for buttons */
-    div.stButton > button:disabled {
-        background-color: #111827 !important;
-        color: #4b5563 !important;
-        border-color: #1f2937 !important;
-        cursor: not-allowed !important;
-        opacity: 0.6 !important;
+    /* SIDEBAR STYLING - LIGHT BACKGROUND WITH CRISP BLACK TEXT */
+    section[data-testid="stSidebar"] {
+        background-color: #f1f5f9 !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #0f172a !important;
+    }
+    section[data-testid="stSidebar"] div.stButton > button {
+        background-color: #e2e8f0 !important;
+        color: #0f172a !important;
+        border: 1px solid #94a3b8 !important;
+    }
+    section[data-testid="stSidebar"] div.stButton > button:hover {
+        background-color: #cbd5e1 !important;
+        color: #0f172a !important;
     }
 
-    /* Selectbox and Radio styling */
+    /* Selectbox, Radio & File Uploader */
     div[data-baseweb="select"] > div {
         background-color: #111827 !important;
         border-color: #374151 !important;
@@ -7405,6 +7426,12 @@ st.markdown("""
     div[role="listbox"] {
         background-color: #111827 !important;
         color: #ffffff !important;
+    }
+    [data-testid="stFileUploader"] {
+        background-color: #111827 !important;
+        border: 1px dashed #38bdf8 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -7481,11 +7508,10 @@ with st.sidebar:
 if not st.session_state.get("quiz_started", False):
     st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="background-color: #111827; border: 1px solid #374151; border-radius: 12px; padding: 2rem 1.5rem; margin: 1.5rem 0; text-align: center;">
-        <h2 style="color: #38bdf8 !important; margin-bottom: 1rem; font-size: 1.6rem; font-weight: 800;">Welcome to the 450-Question Board Exam Prep</h2>
-        <p style="color: #e2e8f0 !important; font-size: 1.05rem; line-height: 1.6; max-width: 650px; margin: 0 auto 1.5rem auto;">
+    st.markdown('''
+    <div class="welcome-card">
+        <h2>Welcome to the 450-Question Board Exam Prep</h2>
+        <p>
             Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
         </p>
         <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
@@ -7494,16 +7520,16 @@ if not st.session_state.get("quiz_started", False):
             <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
         </div>
         
-        <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 1.25rem; text-align: left; max-width: 650px; margin: 0 auto;">
-            <h4 style="color: #38bdf8 !important; margin-top: 0; font-weight: 700; font-size: 1.05rem;">💾 How to Save and Restore Your Progress:</h4>
-            <ol style="color: #f8fafc !important; font-size: 0.95rem; margin-bottom: 0; padding-left: 1.2rem; line-height: 1.7;">
+        <div class="steps-box">
+            <h4>💾 How to Save and Restore Your Progress:</h4>
+            <ol>
                 <li><b>Automatic In-Session Saving:</b> Your selected answers and bookmarks save automatically as you move through questions.</li>
                 <li><b>Saving to Your Device:</b> At the end of a study session, click <b>"📥 Download Saved Progress"</b> in the left Sidebar or <b>📊 Analytics</b> tab to save your progress file to your phone, tablet, or computer.</li>
                 <li><b>Restoring Your Study Progress:</b> Whenever you open the quiz again on any device, click <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your saved file and continue right where you left off!</li>
             </ol>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
 
     col_s1, col_s2, col_s3 = st.columns([1, 2, 1])
     with col_s2:
