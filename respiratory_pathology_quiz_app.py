@@ -7249,7 +7249,7 @@ if "active_indices" not in st.session_state:
 
 if "quiz_started" not in st.session_state:
     st.session_state.quiz_started = False
-    
+
 # --- CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
@@ -7314,14 +7314,14 @@ st.markdown("""
 
     /* Steps Box Inside Welcome Card */
     .steps-box {
-        background-color: #1e293b;
-        border: 2px solid #38bdf8;
-        border-radius: 10px;
-        padding: 1.5rem;
-        text-align: left;
-        max-width: 650px;
-        margin: 0 auto;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        background-color: #1e293b !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 10px !important;
+        padding: 1.5rem !important;
+        text-align: left !important;
+        max-width: 650px !important;
+        margin: 0 auto !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
     .steps-box h4 {
         color: #38bdf8 !important;
@@ -7466,33 +7466,6 @@ with st.sidebar:
 
     st.divider()
     st.markdown("#### 💾 Progress Data")
-
-    # --- MAIN INTERFACE RENDERING ---
-if not st.session_state.get("quiz_started", False):
-    st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
-    st.markdown('''
-    <div class="welcome-card">
-        <h2>Welcome to the 450-Question Board Exam Prep</h2>
-        <p>
-            Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
-        </p>
-        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">⏱️ 1-Min Limit per Question</span>
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📚 6 Core Pathology Categories</span>
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
-        </div>
-        
-        <div class="steps-box">
-            <h4>💾 How to Save and Restore Your Progress:</h4>
-            <ol>
-                <li><b>Automatic In-Session Saving:</b> Your selected answers and bookmarks save automatically as you move through questions.</li>
-                <li><b>Saving to Your Device:</b> At the end of a study session, click <b>"📥 Download Saved Progress"</b> in the left Sidebar or <b>📊 Analytics</b> tab to save your progress file to your phone, tablet, or computer.</li>
-                <li><b>Restoring Your Study Progress:</b> Whenever you open the quiz again on any device, click <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your saved file and continue right where you left off!</li>
-            </ol>
-        </div>
-    </div>
-    ''', unsafe_allow_html=True)
     
     # Download JSON
     export_data = {
@@ -7530,6 +7503,33 @@ if not st.session_state.get("quiz_started", False):
         st.session_state.user_answers = {}
         st.session_state.bookmarks = set()
         st.rerun()
+
+# --- MAIN INTERFACE RENDERING ---
+if not st.session_state.get("quiz_started", False):
+    st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
+    st.markdown('''
+    <div class="welcome-card">
+        <h2>Welcome to the 450-Question Board Exam Prep</h2>
+        <p>
+            Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">⏱️ 1-Min Limit per Question</span>
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📚 6 Core Pathology Categories</span>
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
+        </div>
+        
+        <div class="steps-box">
+            <h4>💾 How to Save and Restore Your Progress:</h4>
+            <ol>
+                <li><b>Automatic In-Session Saving:</b> Your selected answers and bookmarks save automatically as you move through questions.</li>
+                <li><b>Saving to Your Device:</b> At the end of a study session, click <b>"📥 Download Saved Progress"</b> in the left Sidebar or <b>📊 Analytics</b> tab to save your progress file to your phone, tablet, or computer.</li>
+                <li><b>Restoring Your Study Progress:</b> Whenever you open the quiz again on any device, click <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your saved file and continue right where you left off!</li>
+            </ol>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
 
     col_s1, col_s2, col_s3 = st.columns([1, 2, 1])
     with col_s2:
