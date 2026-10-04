@@ -51,6 +51,9 @@ if "active_category" not in st.session_state:
 if "active_indices" not in st.session_state:
     st.session_state.active_indices = {cat: 0 for cat in CATEGORIES}
 
+if "quiz_started" not in st.session_state:
+    st.session_state.quiz_started = False
+
 # --- CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
@@ -274,272 +277,302 @@ with st.sidebar:
         st.session_state.bookmarks = set()
         st.rerun()
 
-# --- MAIN INTERFACE HEADER ---
-st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank with 1-Min Time Limit & Instant Rationale</div>', unsafe_allow_html=True)
 
-# --- CATEGORY TABS ---
-tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
-tabs = st.tabs(tab_names)
+# --- MAIN INTERFACE RENDERING ---
+if not st.session_state.get("quiz_started", False):
+    st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
 
-
-# Callbacks for Navigation and State Changes
-def go_prev_cb(cat_name, prev_tuple):
-    if prev_tuple:
-        select_key = f"select_{cat_name}"
-        st.session_state[select_key] = prev_tuple
-        st.session_state.active_indices[cat_name] = prev_tuple[0]
-
-def go_next_cb(cat_name, next_tuple):
-    if next_tuple:
-        select_key = f"select_{cat_name}"
-        st.session_state[select_key] = next_tuple
-        st.session_state.active_indices[cat_name] = next_tuple[0]
-
-def toggle_bm_cb(q_id_to_bm):
-    if q_id_to_bm in st.session_state.bookmarks:
-        st.session_state.bookmarks.remove(q_id_to_bm)
-    else:
-        st.session_state.bookmarks.add(q_id_to_bm)
-
-def render_category_quiz(category_name, tab_idx):
-    cat_questions = [q for q in QUIZ_DATA if q["category"] == category_name]
-    num_cat_q = len(cat_questions)
-
-    # Question Navigation Header
-    col_nav, col_filter = st.columns([3, 2])
-    
-    with col_filter:
-        q_filter = st.selectbox(
-            "Filter Questions:",
-            ["All Questions", "Unanswered", "Incorrect", "Bookmarked"],
-            key=f"filter_{category_name}"
-        )
-
-    # Apply filter
-    filtered_questions = []
-    for idx, q in enumerate(cat_questions):
-        q_id = q["id"]
-        is_answered = q_id in st.session_state.user_answers
-        user_sel = st.session_state.user_answers.get(q_id)
-        is_correct = is_answered and (user_sel == q["answer"])
-        is_bookmarked = q_id in st.session_state.bookmarks
-
-        if q_filter == "Unanswered" and is_answered:
-            continue
-        if q_filter == "Incorrect" and (not is_answered or is_correct):
-            continue
-        if q_filter == "Bookmarked" and not is_bookmarked:
-            continue
-        filtered_questions.append((idx, q))
-
-    if not filtered_questions:
-        st.info(f"No questions match the selected filter: **{q_filter}**.")
-        return
-
-    select_key = f"select_{category_name}"
-    
-    # Ensure select_key exists in st.session_state and its value is valid
-    if select_key not in st.session_state or st.session_state[select_key] not in filtered_questions:
-        st.session_state[select_key] = filtered_questions[0]
-
-    current_tuple = st.session_state[select_key]
-    current_filtered_pos = filtered_questions.index(current_tuple)
-
-    with col_nav:
-        selected_q_tuple = st.selectbox(
-            f"Select Question (Total {num_cat_q}):",
-            filtered_questions,
-            format_func=lambda item: f"Q{item[0]+1}: {item[1]['question'][:70]}...",
-            key=select_key
-        )
-        current_q_idx, current_q = selected_q_tuple
-        st.session_state.active_indices[category_name] = current_q_idx
-
-    q_id = current_q["id"]
-
-    # Prev / Next Controls & Bookmark
-    col_prev, col_bm, col_next = st.columns([1, 2, 1])
-    
-    prev_disabled = (current_filtered_pos == 0)
-    prev_target = filtered_questions[current_filtered_pos - 1] if not prev_disabled else None
-
-    next_disabled = (current_filtered_pos == len(filtered_questions) - 1)
-    next_target = filtered_questions[current_filtered_pos + 1] if not next_disabled else None
-
-    with col_prev:
-        st.button(
-            "⬅️ Previous", 
-            key=f"prev_{q_id}", 
-            disabled=prev_disabled,
-            on_click=go_prev_cb,
-            args=(category_name, prev_target)
-        )
-
-    with col_bm:
-        is_bm = q_id in st.session_state.bookmarks
-        bm_label = "🔖 Bookmarked" if is_bm else "🏷️ Bookmark Question"
-        st.button(
-            bm_label, 
-            key=f"bm_{q_id}",
-            on_click=toggle_bm_cb,
-            args=(q_id,)
-        )
-
-    with col_next:
-        st.button(
-            "Next ➡️", 
-            key=f"next_{q_id}", 
-            disabled=next_disabled,
-            on_click=go_next_cb,
-            args=(category_name, next_target)
-        )
-
-    st.divider()
-
-
-    # --- 1-MINUTE QUESTION TIMER COMPONENT WITH AUTO-ADVANCE ---
-    timer_html = f"""
-    <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-weight: bold; color: #38bdf8; font-size: 0.95rem;">⏱️ Question Timer (1-Min Limit):</span>
-        <span id="timer-display-{q_id}" style="font-family: monospace; font-size: 1.2rem; font-weight: bold; color: #f59e0b;">01:00</span>
-    </div>
-    <script>
-        (function() {{
-            var timeLeft = 60;
-            var display = document.getElementById("timer-display-{q_id}");
-            if (!display) return;
-            var interval = setInterval(function() {{
-                timeLeft--;
-                var mins = Math.floor(timeLeft / 60);
-                var secs = timeLeft % 60;
-                display.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
-                if (timeLeft <= 10) {{
-                    display.style.color = "#ef4444";
-                }}
-                if (timeLeft <= 0) {{
-                    clearInterval(interval);
-                    display.innerText = "TIME EXPIRED - MOVING TO NEXT...";
-                    try {{
-                        var buttons = window.parent.document.querySelectorAll('button');
-                        for (var i = 0; i < buttons.length; i++) {{
-                            var txt = buttons[i].innerText || buttons[i].textContent;
-                            if (txt && txt.includes('Next ➡️') && !buttons[i].disabled) {{
-                                buttons[i].click();
-                                break;
-                            }}
-                        }}
-                    }} catch(e) {{
-                        console.log("Timer auto-advance error:", e);
-                    }}
-                }}
-            }}, 1000);
-        }})();
-    </script>
-    """
-    components.html(timer_html, height=65)
-
-    # --- QUESTION CARD DISPLAY ---
-    q_type = current_q.get("type", "Standard")
-    badge_class = "badge-vignette" if "Vignette" in q_type else ("badge-exception" if "Exception" in q_type else ("badge-conceptual" if "Conceptual" in q_type else "badge-recall"))
-    
-    st.markdown(
-        f"""
-        <div class="q-card">
-            <span class="q-badge {badge_class}">{q_type}</span>
-            <span style="color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Question {current_q_idx + 1} of {num_cat_q} (ID: {q_id})</span>
-            <h3 style="color: #f8fafc; margin-top: 0.75rem; font-size: 1.15rem; line-height: 1.5;">{current_q['question']}</h3>
+    st.markdown("""
+    <div style="background-color: #111827; border: 1px solid #374151; border-radius: 12px; padding: 2.5rem 1.5rem; margin: 1.5rem 0; text-align: center;">
+        <h2 style="color: #38bdf8 !important; margin-bottom: 1rem; font-size: 1.6rem; font-weight: 800;">Welcome to the 450-Question Board Exam Prep</h2>
+        <p style="color: #e2e8f0 !important; font-size: 1.05rem; line-height: 1.6; max-width: 650px; margin: 0 auto 1.5rem auto;">
+            Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">⏱️ 1-Min Limit per Question</span>
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📚 6 Core Pathology Categories</span>
+            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    </div>
+    """, unsafe_allow_html=True)
 
-    # --- ANSWER OPTIONS RADIO ---
-    existing_sel = st.session_state.user_answers.get(q_id)
-    options = current_q["options"]
+    col_s1, col_s2, col_s3 = st.columns([1, 2, 1])
+    with col_s2:
+        if st.button("🚀 Begin Quiz", type="primary", key="begin_quiz_btn"):
+            st.session_state.quiz_started = True
+            st.rerun()
+else:
+    # --- MAIN INTERFACE HEADER ---
+    st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank with 1-Min Time Limit & Instant Rationale</div>', unsafe_allow_html=True)
 
-    # Format radio options
-    selected_idx = st.radio(
-        "Select your answer:",
-        options=list(range(len(options))),
-        format_func=lambda i: f"{chr(65+i)}. {options[i]}",
-        index=existing_sel if existing_sel is not None else 0,
-        key=f"radio_{q_id}"
-    )
+    # --- CATEGORY TABS ---
+    tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
+    tabs = st.tabs(tab_names)
 
-    col_sub, col_status = st.columns([1, 3])
-    with col_sub:
-        submit_btn = st.button("Submit Answer 🎯", key=f"sub_{q_id}", type="primary")
+    # --- CATEGORY TABS ---
+    tab_names = [f"{CATEGORY_ICONS[cat]} {cat}" for cat in CATEGORIES] + ["📊 Analytics & Review"]
+    tabs = st.tabs(tab_names)
 
-    if submit_btn or existing_sel is not None:
-        if submit_btn:
-            st.session_state.user_answers[q_id] = selected_idx
-            existing_sel = selected_idx
 
-        correct_idx = current_q["answer"]
-        is_user_correct = (existing_sel == correct_idx)
+    # Callbacks for Navigation and State Changes
+    def go_prev_cb(cat_name, prev_tuple):
+        if prev_tuple:
+            select_key = f"select_{cat_name}"
+            st.session_state[select_key] = prev_tuple
+            st.session_state.active_indices[cat_name] = prev_tuple[0]
 
-        if is_user_correct:
-            st.success(f"🎉 **Correct!** Answer: **{chr(65+correct_idx)}. {options[correct_idx]}**")
+    def go_next_cb(cat_name, next_tuple):
+        if next_tuple:
+            select_key = f"select_{cat_name}"
+            st.session_state[select_key] = next_tuple
+            st.session_state.active_indices[cat_name] = next_tuple[0]
+
+    def toggle_bm_cb(q_id_to_bm):
+        if q_id_to_bm in st.session_state.bookmarks:
+            st.session_state.bookmarks.remove(q_id_to_bm)
         else:
-            st.error(f"❌ **Incorrect.** You selected **{chr(65+existing_sel)}**, but the correct answer is **{chr(65+correct_idx)}. {options[correct_idx]}**")
+            st.session_state.bookmarks.add(q_id_to_bm)
 
-        # Rationale & Explanation
-        with st.expander("📖 Pathological Rationale & High-Yield Explanation", expanded=True):
-            st.markdown(f"**Explanation:** {current_q['explanation']}")
-            if "citation" in current_q:
-                st.caption(f"📚 **Source Reference:** {current_q['citation']}")
+    def render_category_quiz(category_name, tab_idx):
+        cat_questions = [q for q in QUIZ_DATA if q["category"] == category_name]
+        num_cat_q = len(cat_questions)
 
-# Render Category Tabs
-for i, cat in enumerate(CATEGORIES):
-    with tabs[i]:
-        render_category_quiz(cat, i)
-
-# --- ANALYTICS DASHBOARD TAB ---
-with tabs[6]:
-    st.header("📊 Performance & Review Analytics")
+        # Question Navigation Header
+        col_nav, col_filter = st.columns([3, 2])
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Questions Attempted", f"{len(st.session_state.user_answers)} / {len(QUIZ_DATA)}")
-    with col2:
-        tot_correct = sum(1 for q_id, sel in st.session_state.user_answers.items() if next(q for q in QUIZ_DATA if q["id"] == q_id)["answer"] == sel)
-        tot_ans = len(st.session_state.user_answers)
-        acc_val = (tot_correct / tot_ans * 100) if tot_ans > 0 else 0
-        st.metric("Overall Accuracy", f"{acc_val:.1f}%")
-    with col3:
-        st.metric("Bookmarked for Review", f"{len(st.session_state.bookmarks)}")
+        with col_filter:
+            q_filter = st.selectbox(
+                "Filter Questions:",
+                ["All Questions", "Unanswered", "Incorrect", "Bookmarked"],
+                key=f"filter_{category_name}"
+            )
 
-    st.divider()
-    st.subheader("📈 Category Breakdown")
+        # Apply filter
+        filtered_questions = []
+        for idx, q in enumerate(cat_questions):
+            q_id = q["id"]
+            is_answered = q_id in st.session_state.user_answers
+            user_sel = st.session_state.user_answers.get(q_id)
+            is_correct = is_answered and (user_sel == q["answer"])
+            is_bookmarked = q_id in st.session_state.bookmarks
 
-    cat_summary = []
-    for cat in CATEGORIES:
-        cat_qs = [q for q in QUIZ_DATA if q["category"] == cat]
-        tot = len(cat_qs)
-        ans = sum(1 for q in cat_qs if q["id"] in st.session_state.user_answers)
-        cor = sum(1 for q in cat_qs if st.session_state.user_answers.get(q["id"]) == q["answer"])
-        acc = (cor / ans * 100) if ans > 0 else 0.0
-        cat_summary.append({
-            "Category": cat,
-            "Total Questions": tot,
-            "Attempted": ans,
-            "Correct": cor,
-            "Accuracy (%)": round(acc, 1)
-        })
+            if q_filter == "Unanswered" and is_answered:
+                continue
+            if q_filter == "Incorrect" and (not is_answered or is_correct):
+                continue
+            if q_filter == "Bookmarked" and not is_bookmarked:
+                continue
+            filtered_questions.append((idx, q))
 
-    df_cat = pd.DataFrame(cat_summary)
-    st.dataframe(df_cat, use_container_width=True)
+        if not filtered_questions:
+            st.info(f"No questions match the selected filter: **{q_filter}**.")
+            return
 
-    st.divider()
-    st.subheader("🔖 Bookmarked Questions")
-    if not st.session_state.bookmarks:
-        st.info("No questions bookmarked yet. Click 'Bookmark Question' on any question card to save it for review.")
-    else:
-        for bm_id in st.session_state.bookmarks:
-            q_item = next((q for q in QUIZ_DATA if q["id"] == bm_id), None)
-            if q_item:
-                with st.expander(f"[{q_item['category']}] {q_item['question'][:80]}..."):
-                    st.write(f"**Question:** {q_item['question']}")
-                    st.write(f"**Correct Answer:** {chr(65+q_item['answer'])}. {q_item['options'][q_item['answer']]}")
-                    st.write(f"**Explanation:** {q_item['explanation']}")
+        select_key = f"select_{category_name}"
+    
+        # Ensure select_key exists in st.session_state and its value is valid
+        if select_key not in st.session_state or st.session_state[select_key] not in filtered_questions:
+            st.session_state[select_key] = filtered_questions[0]
+
+        current_tuple = st.session_state[select_key]
+        current_filtered_pos = filtered_questions.index(current_tuple)
+
+        with col_nav:
+            selected_q_tuple = st.selectbox(
+                f"Select Question (Total {num_cat_q}):",
+                filtered_questions,
+                format_func=lambda item: f"Q{item[0]+1}: {item[1]['question'][:70]}...",
+                key=select_key
+            )
+            current_q_idx, current_q = selected_q_tuple
+            st.session_state.active_indices[category_name] = current_q_idx
+
+        q_id = current_q["id"]
+
+        # Prev / Next Controls & Bookmark
+        col_prev, col_bm, col_next = st.columns([1, 2, 1])
+    
+        prev_disabled = (current_filtered_pos == 0)
+        prev_target = filtered_questions[current_filtered_pos - 1] if not prev_disabled else None
+
+        next_disabled = (current_filtered_pos == len(filtered_questions) - 1)
+        next_target = filtered_questions[current_filtered_pos + 1] if not next_disabled else None
+
+        with col_prev:
+            st.button(
+                "⬅️ Previous", 
+                key=f"prev_{q_id}", 
+                disabled=prev_disabled,
+                on_click=go_prev_cb,
+                args=(category_name, prev_target)
+            )
+
+        with col_bm:
+            is_bm = q_id in st.session_state.bookmarks
+            bm_label = "🔖 Bookmarked" if is_bm else "🏷️ Bookmark Question"
+            st.button(
+                bm_label, 
+                key=f"bm_{q_id}",
+                on_click=toggle_bm_cb,
+                args=(q_id,)
+            )
+
+        with col_next:
+            st.button(
+                "Next ➡️", 
+                key=f"next_{q_id}", 
+                disabled=next_disabled,
+                on_click=go_next_cb,
+                args=(category_name, next_target)
+            )
+
+        st.divider()
+
+
+        # --- 1-MINUTE QUESTION TIMER COMPONENT WITH AUTO-ADVANCE ---
+        timer_html = f"""
+        <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold; color: #38bdf8; font-size: 0.95rem;">⏱️ Question Timer (1-Min Limit):</span>
+            <span id="timer-display-{q_id}" style="font-family: monospace; font-size: 1.2rem; font-weight: bold; color: #f59e0b;">01:00</span>
+        </div>
+        <script>
+            (function() {{
+                var timeLeft = 60;
+                var display = document.getElementById("timer-display-{q_id}");
+                if (!display) return;
+                var interval = setInterval(function() {{
+                    timeLeft--;
+                    var mins = Math.floor(timeLeft / 60);
+                    var secs = timeLeft % 60;
+                    display.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+                    if (timeLeft <= 10) {{
+                        display.style.color = "#ef4444";
+                    }}
+                    if (timeLeft <= 0) {{
+                        clearInterval(interval);
+                        display.innerText = "TIME EXPIRED - MOVING TO NEXT...";
+                        try {{
+                            var buttons = window.parent.document.querySelectorAll('button');
+                            for (var i = 0; i < buttons.length; i++) {{
+                                var txt = buttons[i].innerText || buttons[i].textContent;
+                                if (txt && txt.includes('Next ➡️') && !buttons[i].disabled) {{
+                                    buttons[i].click();
+                                    break;
+                                }}
+                            }}
+                        }} catch(e) {{
+                            console.log("Timer auto-advance error:", e);
+                        }}
+                    }}
+                }}, 1000);
+            }})();
+        </script>
+        """
+        components.html(timer_html, height=65)
+
+        # --- QUESTION CARD DISPLAY ---
+        q_type = current_q.get("type", "Standard")
+        badge_class = "badge-vignette" if "Vignette" in q_type else ("badge-exception" if "Exception" in q_type else ("badge-conceptual" if "Conceptual" in q_type else "badge-recall"))
+    
+        st.markdown(
+            f"""
+            <div class="q-card">
+                <span class="q-badge {badge_class}">{q_type}</span>
+                <span style="color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Question {current_q_idx + 1} of {num_cat_q} (ID: {q_id})</span>
+                <h3 style="color: #f8fafc; margin-top: 0.75rem; font-size: 1.15rem; line-height: 1.5;">{current_q['question']}</h3>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # --- ANSWER OPTIONS RADIO ---
+        existing_sel = st.session_state.user_answers.get(q_id)
+        options = current_q["options"]
+
+        # Format radio options
+        selected_idx = st.radio(
+            "Select your answer:",
+            options=list(range(len(options))),
+            format_func=lambda i: f"{chr(65+i)}. {options[i]}",
+            index=existing_sel if existing_sel is not None else 0,
+            key=f"radio_{q_id}"
+        )
+
+        col_sub, col_status = st.columns([1, 3])
+        with col_sub:
+            submit_btn = st.button("Submit Answer 🎯", key=f"sub_{q_id}", type="primary")
+
+        if submit_btn or existing_sel is not None:
+            if submit_btn:
+                st.session_state.user_answers[q_id] = selected_idx
+                existing_sel = selected_idx
+
+            correct_idx = current_q["answer"]
+            is_user_correct = (existing_sel == correct_idx)
+
+            if is_user_correct:
+                st.success(f"🎉 **Correct!** Answer: **{chr(65+correct_idx)}. {options[correct_idx]}**")
+            else:
+                st.error(f"❌ **Incorrect.** You selected **{chr(65+existing_sel)}**, but the correct answer is **{chr(65+correct_idx)}. {options[correct_idx]}**")
+
+            # Rationale & Explanation
+            with st.expander("📖 Pathological Rationale & High-Yield Explanation", expanded=True):
+                st.markdown(f"**Explanation:** {current_q['explanation']}")
+                if "citation" in current_q:
+                    st.caption(f"📚 **Source Reference:** {current_q['citation']}")
+
+    # Render Category Tabs
+    for i, cat in enumerate(CATEGORIES):
+        with tabs[i]:
+            render_category_quiz(cat, i)
+
+    # --- ANALYTICS DASHBOARD TAB ---
+    with tabs[6]:
+        st.header("📊 Performance & Review Analytics")
+    
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Questions Attempted", f"{len(st.session_state.user_answers)} / {len(QUIZ_DATA)}")
+        with col2:
+            tot_correct = sum(1 for q_id, sel in st.session_state.user_answers.items() if next(q for q in QUIZ_DATA if q["id"] == q_id)["answer"] == sel)
+            tot_ans = len(st.session_state.user_answers)
+            acc_val = (tot_correct / tot_ans * 100) if tot_ans > 0 else 0
+            st.metric("Overall Accuracy", f"{acc_val:.1f}%")
+        with col3:
+            st.metric("Bookmarked for Review", f"{len(st.session_state.bookmarks)}")
+
+        st.divider()
+        st.subheader("📈 Category Breakdown")
+
+        cat_summary = []
+        for cat in CATEGORIES:
+            cat_qs = [q for q in QUIZ_DATA if q["category"] == cat]
+            tot = len(cat_qs)
+            ans = sum(1 for q in cat_qs if q["id"] in st.session_state.user_answers)
+            cor = sum(1 for q in cat_qs if st.session_state.user_answers.get(q["id"]) == q["answer"])
+            acc = (cor / ans * 100) if ans > 0 else 0.0
+            cat_summary.append({
+                "Category": cat,
+                "Total Questions": tot,
+                "Attempted": ans,
+                "Correct": cor,
+                "Accuracy (%)": round(acc, 1)
+            })
+
+        df_cat = pd.DataFrame(cat_summary)
+        st.dataframe(df_cat, use_container_width=True)
+
+        st.divider()
+        st.subheader("🔖 Bookmarked Questions")
+        if not st.session_state.bookmarks:
+            st.info("No questions bookmarked yet. Click 'Bookmark Question' on any question card to save it for review.")
+        else:
+            for bm_id in st.session_state.bookmarks:
+                q_item = next((q for q in QUIZ_DATA if q["id"] == bm_id), None)
+                if q_item:
+                    with st.expander(f"[{q_item['category']}] {q_item['question'][:80]}..."):
+                        st.write(f"**Question:** {q_item['question']}")
+                        st.write(f"**Correct Answer:** {chr(65+q_item['answer'])}. {q_item['options'][q_item['answer']]}")
+                        st.write(f"**Explanation:** {q_item['explanation']}")
