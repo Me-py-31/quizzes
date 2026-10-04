@@ -254,29 +254,51 @@ with st.sidebar:
     st.divider()
     st.subheader("⚙️ Tools & Actions")
 
-    # Export Results
-    if st.button("📥 Export Results (JSON)"):
-        export_data = {
-            "user_answers": st.session_state.user_answers,
-            "bookmarks": list(st.session_state.bookmarks),
-            "total_questions": total_q,
-            "answered": answered_q,
-            "correct": correct_cnt,
-            "accuracy": round(accuracy, 2)
-        }
-        st.download_button(
-            label="Click to Save Results JSON",
-            data=json.dumps(export_data, indent=2),
-            file_name="respiratory_pathology_results.json",
-            mime="application/json"
-        )
+
+    # Export / Restore Results
+    st.markdown("#### 💾 Progress Data")
+    
+    # Download JSON
+    export_data = {
+        "user_answers": st.session_state.user_answers,
+        "bookmarks": list(st.session_state.bookmarks),
+        "total_questions": total_q,
+        "answered": answered_q,
+        "correct": correct_cnt,
+        "accuracy": round(accuracy, 2)
+    }
+    st.download_button(
+        label="📥 Download Saved Progress (JSON)",
+        data=json.dumps(export_data, indent=2),
+        file_name="respiratory_pathology_results.json",
+        mime="application/json",
+        use_container_width=True
+    )
+
+    # Upload / Restore JSON
+    uploaded_file = st.file_uploader("📤 Restore Saved Progress (JSON)", type=["json"], key="json_uploader_sidebar")
+    if uploaded_file is not None:
+        try:
+            imported_data = json.load(uploaded_file)
+            if "user_answers" in imported_data:
+                # Handle string keys or integer values
+                raw_ans = imported_data["user_answers"]
+                formatted_ans = {}
+                for k, v in raw_ans.items():
+                    formatted_ans[k] = v
+                st.session_state.user_answers = formatted_ans
+                if "bookmarks" in imported_data:
+                    st.session_state.bookmarks = set(imported_data["bookmarks"])
+                st.success("✅ Progress restored successfully!")
+                st.rerun()
+        except Exception as e:
+            st.error("⚠️ Invalid progress JSON file.")
 
     # Reset Progress
-    if st.button("🔄 Reset All Progress", type="secondary"):
+    if st.button("🔄 Reset All Progress", type="secondary", use_container_width=True):
         st.session_state.user_answers = {}
         st.session_state.bookmarks = set()
         st.rerun()
-
 
 # --- MAIN INTERFACE RENDERING ---
 if not st.session_state.get("quiz_started", False):
@@ -284,7 +306,7 @@ if not st.session_state.get("quiz_started", False):
     st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="background-color: #111827; border: 1px solid #374151; border-radius: 12px; padding: 2.5rem 1.5rem; margin: 1.5rem 0; text-align: center;">
+    <div style="background-color: #111827; border: 1px solid #374151; border-radius: 12px; padding: 2rem 1.5rem; margin: 1.5rem 0; text-align: center;">
         <h2 style="color: #38bdf8 !important; margin-bottom: 1rem; font-size: 1.6rem; font-weight: 800;">Welcome to the 450-Question Board Exam Prep</h2>
         <p style="color: #e2e8f0 !important; font-size: 1.05rem; line-height: 1.6; max-width: 650px; margin: 0 auto 1.5rem auto;">
             Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
@@ -293,6 +315,15 @@ if not st.session_state.get("quiz_started", False):
             <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">⏱️ 1-Min Limit per Question</span>
             <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📚 6 Core Pathology Categories</span>
             <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
+        </div>
+        
+        <div style="background-color: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 1.25rem; text-align: left; max-width: 650px; margin: 0 auto;">
+            <h4 style="color: #38bdf8 !important; margin-top: 0; font-weight: 700; font-size: 1.05rem;">💾 How to Save Your Progress:</h4>
+            <ol style="color: #f8fafc !important; font-size: 0.95rem; margin-bottom: 0; padding-left: 1.2rem; line-height: 1.6;">
+                <li><b>Automatic In-Session Saving:</b> Your answers and bookmarks are automatically saved in real-time as you complete questions.</li>
+                <li><b>Save to Your Device (No GitHub Needed!):</b> Click <b>"📥 Download Saved Progress"</b> in the left Sidebar or 📊 Analytics tab to save your <code>respiratory_pathology_results.json</code> file to your computer or phone.</li>
+                <li><b>Restore Anytime:</b> Whenever you return to the app, use <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your JSON file and pick up right where you left off!</li>
+            </ol>
         </div>
     </div>
     """, unsafe_allow_html=True)
