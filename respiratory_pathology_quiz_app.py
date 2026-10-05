@@ -7509,23 +7509,32 @@ if not st.session_state.get("quiz_started", False):
     st.markdown('<div class="main-title">Respiratory Pathology Board Review</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Interactive 450 High-Yield Question Bank • Robbins Review & Selected Banks</div>', unsafe_allow_html=True)
     st.markdown('''
-    <div class="welcome-card">
-        <h2>Welcome to the 450-Question Board Exam Prep</h2>
-        <p>
+    <div style="background-color: #0b1329 !important; color: #ffffff !important; border: 1px solid #1e293b !important; border-radius: 12px !important; padding: 2rem 1.5rem !important; margin: 1.5rem 0 !important; text-align: center !important;">
+        <h2 style="color: #38bdf8 !important; background-color: transparent !important; margin-bottom: 1rem !important; font-size: 1.6rem !important; font-weight: 800 !important;">Welcome to the 450-Question Board Exam Prep</h2>
+        <p style="color: #f8fafc !important; background-color: transparent !important; font-size: 1.05rem !important; line-height: 1.6 !important; max-width: 650px !important; margin: 0 auto 1.5rem auto !important;">
             Test your clinical reasoning across 6 core categories in Respiratory Pathology. Features include a 1-minute question timer, auto-advance, instant pathological rationale, and session progress saving.
         </p>
-        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">⏱️ 1-Min Limit per Question</span>
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📚 6 Core Pathology Categories</span>
-            <span style="background-color: #1e293b; color: #38bdf8 !important; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">📊 Saved Progress & Analytics</span>
+        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; background-color: transparent !important;">
+            <span style="background-color: #1e293b !important; color: #38bdf8 !important; padding: 0.5rem 1rem !important; border-radius: 9999px !important; font-weight: 600 !important; font-size: 0.9rem !important;">⏱️ 1-Min Limit per Question</span>
+            <span style="background-color: #1e293b !important; color: #38bdf8 !important; padding: 0.5rem 1rem !important; border-radius: 9999px !important; font-weight: 600 !important; font-size: 0.9rem !important;">📚 6 Core Pathology Categories</span>
+            <span style="background-color: #1e293b !important; color: #38bdf8 !important; padding: 0.5rem 1rem !important; border-radius: 9999px !important; font-weight: 600 !important; font-size: 0.9rem !important;">📊 Saved Progress & Analytics</span>
         </div>
         
-        <div class="steps-box">
-            <h4>💾 How to Save and Restore Your Progress:</h4>
-            <ol>
-                <li><b>Automatic In-Session Saving:</b> Your selected answers and bookmarks save automatically as you move through questions.</li>
-                <li><b>Saving to Your Device:</b> At the end of a study session, click <b>"📥 Download Saved Progress"</b> in the left Sidebar or <b>📊 Analytics</b> tab to save your progress file to your phone, tablet, or computer.</li>
-                <li><b>Restoring Your Study Progress:</b> Whenever you open the quiz again on any device, click <b>"📤 Restore Saved Progress"</b> in the left Sidebar to upload your saved file and continue right where you left off!</li>
+        <div style="background-color: #030712 !important; color: #ffffff !important; border: 2px solid #38bdf8 !important; border-radius: 10px !important; padding: 1.5rem !important; text-align: left !important; max-width: 650px !important; margin: 0 auto !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8) !important;">
+            <h4 style="color: #38bdf8 !important; background-color: transparent !important; margin-top: 0 !important; margin-bottom: 0.75rem !important; font-weight: 700 !important; font-size: 1.1rem !important;">💾 How to Save and Restore Your Progress:</h4>
+            <ol style="color: #ffffff !important; background-color: transparent !important; font-size: 0.98rem !important; margin-bottom: 0 !important; padding-left: 1.3rem !important; line-height: 1.7 !important;">
+                <li style="color: #ffffff !important; background-color: transparent !important; margin-bottom: 0.6rem !important;">
+                    <b style="color: #38bdf8 !important; background-color: transparent !important;">Automatic In-Session Saving:</b> 
+                    <span style="color: #ffffff !important; background-color: transparent !important;">Your selected answers and bookmarks save automatically as you move through questions.</span>
+                </li>
+                <li style="color: #ffffff !important; background-color: transparent !important; margin-bottom: 0.6rem !important;">
+                    <b style="color: #38bdf8 !important; background-color: transparent !important;">Saving to Your Device:</b> 
+                    <span style="color: #ffffff !important; background-color: transparent !important;">At the end of a study session, click <b style="color: #38bdf8 !important;">"📥 Download Saved Progress"</b> in the left Sidebar or <b style="color: #38bdf8 !important;">📊 Analytics</b> tab to save your progress file to your phone, tablet, or computer.</span>
+                </li>
+                <li style="color: #ffffff !important; background-color: transparent !important; margin-bottom: 0.2rem !important;">
+                    <b style="color: #38bdf8 !important; background-color: transparent !important;">Restoring Your Study Progress:</b> 
+                    <span style="color: #ffffff !important; background-color: transparent !important;">Whenever you open the quiz again on any device, click <b style="color: #38bdf8 !important;">"📤 Restore Saved Progress"</b> in the left Sidebar to upload your saved file and continue right where you left off!</span>
+                </li>
             </ol>
         </div>
     </div>
