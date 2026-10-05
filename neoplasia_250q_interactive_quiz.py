@@ -24,7 +24,7 @@ if "current_part" not in st.session_state:
 
 if "question_indices" not in st.session_state:
     st.session_state.question_indices = {
-        "Part 1: Epidemiology & Carcinogenesis": 0,
+        "Part 1: Cancer Epidemiology, Carcinogenesis & Disorders of Growth": 0,
         "Part 2: Tumour Markers": 0,
         "Part 3: Metastasis, Staging and Survival": 0,
         "Part 4: Tumor Host Interactions": 0
@@ -32,7 +32,7 @@ if "question_indices" not in st.session_state:
 
 if "scores" not in st.session_state:
     st.session_state.scores = {
-        "Part 1: Epidemiology & Carcinogenesis": 0,
+        "Part 1: Cancer Epidemiology, Carcinogenesis & Disorders of Growth": 0,
         "Part 2: Tumour Markers": 0,
         "Part 3: Metastasis, Staging and Survival": 0,
         "Part 4: Tumor Host Interactions": 0
