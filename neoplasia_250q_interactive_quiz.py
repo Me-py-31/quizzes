@@ -13,14 +13,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.title("🧬 Neoplasia & Clinical Oncology Master Question Bank (250 Questions)")
+st.title("🧬 Neoplasia & Clinical Oncology Master Question Bank (33 Questions)")
 st.caption("Comprehensive Interactive Assessment | Robbins Pathology & Past Exam Question Banks | 1 min 10 sec Timer Per Question")
 
 # ------------------------------------------------------------------------------
 # 2. SESSION STATE & PROGRESS SAVE / RESTORE UTILITIES
 # ------------------------------------------------------------------------------
 if "current_part" not in st.session_state:
-    st.session_state.current_part = "Part 1: Epidemiology & Carcinogenesis"
+    st.session_state.current_part = "Part 1: Cancer Epidemiology, Carcinogenesis & Disorders of Growth"
 
 if "question_indices" not in st.session_state:
     st.session_state.question_indices = {
