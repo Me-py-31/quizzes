@@ -92,7 +92,7 @@ if selected_part != st.session_state.current_part:
     st.rerun()
 
 
-NEOPLASIA_250_QS = {
+NEOPLASIA_33_QS = {
     "Part 1: Cancer Epidemiology, Carcinogenesis & Disorders of Growth": [
         {
             "id": 1,
